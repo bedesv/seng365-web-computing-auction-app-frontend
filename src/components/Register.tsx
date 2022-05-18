@@ -1,17 +1,30 @@
-import React, {createRef, useState} from 'react';
-import {Button, createTheme, CssBaseline, Grid, Link, TextField, ThemeProvider, Typography} from "@mui/material";
+import React, {useState} from 'react';
+import {
+    Badge,
+    Button,
+    createTheme,
+    CssBaseline,
+    Grid, IconButton, InputAdornment,
+    Link,
+    TextField,
+    ThemeProvider,
+    Tooltip,
+    Typography
+} from "@mui/material";
 import axios from "axios";
-import {Copyright} from "@mui/icons-material";
+import {DriveFileRenameOutlineSharp, Visibility, VisibilityOff} from "@mui/icons-material";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import {useNavigate} from "react-router-dom";
-import Cookies from 'js-cookie'
 import Header from "./Header";
+import defaultProfilePicture from "../static/default-profile.jpg"
+import {useStore} from "../store";
+
+const emailRegex = "[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+(?:[A-Z]{2}|com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|museum|co.nz)\\b"
 
 const Register = () => {
-    // create state and error message variablesvariables for each input
+    // create state and error message variables for each input
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
@@ -21,15 +34,19 @@ const Register = () => {
     const [emailError, setEmailError] = useState('')
     const [passwordError, setPasswordError] = useState('')
     const [globalError, setGlobalError] = useState('')
+    const [profilePicturePreview, setProfilePicturePreview] = useState(defaultProfilePicture)
+    const [profilePicture, setProfilePicture] = useState(null)
+    const [showPassword, setShowPassword] = useState(false);
+    const handleClickShowPassword = () => setShowPassword(!showPassword);
     const theme = createTheme();
     const navigate = useNavigate();
+    const acceptedImageFileTypes = ["image/jpg", "image/jpeg", "image/png", "image/gif"]
+    const userLoggedIn = useStore(state => state.loggedIn)
+    const userId = useStore(state => state.userId)
+    const userToken = useStore(state => state.userToken)
+    const saveUserLogin = useStore(state => state.login)
 
-    const resetErrors = () => {
-        setEmailError('')
-        setFirstNameError('')
-        setLastNameError('')
-        setPasswordError('')
-    }
+
 
     const checkErrors = () => {
         const firstErrors = checkFirstNameErrors(firstName)
@@ -61,8 +78,8 @@ const Register = () => {
     }
 
     const checkEmailErrors = (newEmail: string) => {
-        if (!newEmail.includes('@')) {
-            setEmailError("Error: Email must contain an '@' symbol")
+        if (!newEmail.match(emailRegex)) {
+            setEmailError("Error: Please enter a valid email address")
         } else if (newEmail.length < 1 || newEmail.length>128) {
             setEmailError("Error: Email must be between 1 and 128 characters long")
         } else {
@@ -73,8 +90,8 @@ const Register = () => {
     }
 
     const checkPasswordErrors = (newPassword: string) => {
-        if (newPassword.length < 1 || newPassword.length > 256) {
-            setPasswordError("Error: Password must be between 1 and 256 characters long")
+        if (newPassword.length < 6 || newPassword.length > 256) {
+            setPasswordError("Error: Password must be between 6 and 256 characters long")
         } else {
             setPasswordError('')
             return true
@@ -120,11 +137,11 @@ const Register = () => {
             setLastNameError('')
         }
         // Check the response for email and password errors
-        if (resStatus === 500) {
+        if (resStatus === 403) {
             setEmailError("Error: Email address already in use")
         } else if (resStatus === 400 && resText === "Invalid email/password") {
-            if (password.length < 1 || password.length > 256) {
-                setPasswordError("Error: Password must be between 1 and 256 characters long")
+            if (password.length < 6 || password.length > 256) {
+                setPasswordError("Error: Password must be between 6 and 256 characters long")
             } else {
                 setPasswordError('')
             }
@@ -140,39 +157,102 @@ const Register = () => {
             setEmailError('')
             setPasswordError('')
         }
-    }
-
-    const login = () => {
-        axios.post('http://localhost:4941/api/v1/users/login', {
-            "email": email,
-            "password": password
-        }).then((response) => {
-            Cookies.set("userToken", response.data.token)
-            Cookies.set("userId", response.data.userId)
-        }).catch(err => {
-            setGlobalError("Unknown Error: Please try again")
-        })
-    }
-
-
-
-    const handleSubmit = () => {
-        if (!checkErrors()) {
-            return
+        if (resStatus === 500) {
+            setGlobalError("Server Error: Please try again")
         }
-        axios.post('http://localhost:4941/api/v1/users/register', {
+    }
+
+    const register = async () => {
+        setGlobalError('')
+        if (!checkErrors()) {
+            return 500
+        }
+        const registerResponse = await axios.post('http://localhost:4941/api/v1/users/register', {
             "firstName": firstName,
             "lastName": lastName,
             "email": email,
             "password": password
         })
             .then((response) => {
-                setGlobalError("Unknown Error: Please try again")
-                resetErrors()
+                return response
             }).catch(err => {
                 handleRegisterErrors(err.response.status, err.response.statusText)
+                return err.response
             })
-        };
+        return registerResponse.status
+    }
+
+    const login = async () => {
+        const loginResponse =  await axios.post('http://localhost:4941/api/v1/users/login', {
+            "email": email,
+            "password": password
+        }).then(async (response) => {
+            // Store userId and userToken for later use
+            await saveUserLogin(response.data.userId, response.data.token, profilePicturePreview)
+
+            // Calling saveProfilePicture here because the saveUserLogin doesn't update fast enough and await doesn't
+            // work for some reason
+            if (profilePicture !== null) {
+                await saveProfilePicture(profilePicture, response.data.token, response.data.userId)
+            }
+            return response
+        }).catch(err => {
+            setGlobalError("Server Error: Please try again later")
+            return err.response
+        })
+        return loginResponse.status
+    }
+
+    const saveProfilePicture = async (profilePicture: any, userToken: string, userId: number) => {
+
+        let profilePictureType = profilePicture.type
+
+        if (profilePictureType === 'image/jpg') {
+            profilePictureType = 'image/jpeg'
+        }
+        console.log(userToken)
+        console.log(userId)
+
+        const requestHeaders = {
+            headers: {
+                "content-type": profilePictureType,
+                "X-Authorization": userToken
+            }
+        }
+        const saveProfilePictureResponse =  await axios.put(`http://localhost:4941/api/v1/users/${userId}/image`, profilePicture, requestHeaders)
+            .then((response) => {
+                return response
+            })
+            .catch((err) => {
+                setGlobalError("Error saving profile picture: Please try again in the account settings page")
+                return err.response
+            })
+        return saveProfilePictureResponse.status
+
+
+    }
+
+    const handleSubmit = async () => {
+        const registerResponse = await register()
+        if (registerResponse !== 201) {
+            return
+        }
+        const loginResponse = await login()
+        if (loginResponse !== 200) {
+            return
+        }
+        navigate("/")
+
+    };
+
+    function uploadProfilePicture(e: any) {
+        const profilePicture = e.target.files[0]
+        setProfilePicture(profilePicture)
+        if (profilePicture !== undefined && acceptedImageFileTypes.includes(profilePicture.type)) {
+            const profilePicturePath = URL.createObjectURL(profilePicture)
+            setProfilePicturePreview(profilePicturePath)
+        }
+    }
 
     return (
 
@@ -188,9 +268,7 @@ const Register = () => {
                         alignItems: 'center',
                     }}
                 >
-                    <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-                        <LockOutlinedIcon />
-                    </Avatar>
+
                     <Typography component="h1" variant="h5">
                         Sign up
                     </Typography>
@@ -198,8 +276,28 @@ const Register = () => {
                         {globalError}
                     </Typography>
 
-                    <Box component="form" onSubmit={(e: { preventDefault: () => void; }) => {handleSubmit() ; e.preventDefault()}} sx={{ mt: 3 }}>
+                    <Box component="form" onSubmit={async (e: { preventDefault: () => void; }) => {
+                        await handleSubmit();
+                        e.preventDefault()
+                    }} sx={{ mt: 3 }}>
                         <Grid container spacing={2}>
+                            <Grid sx={{display: 'flex', flexDirection: 'column', alignItems: 'center'}} item xs={12}>
+                                <Badge
+                                    overlap="circular"
+                                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                    badgeContent={
+                                    <>
+                                        <Tooltip title="Upload Profile Picture">
+                                            <label htmlFor="file-input">
+                                                <DriveFileRenameOutlineSharp sx={{cursor: "pointer"}} color='primary' />
+                                            </label>
+                                        </Tooltip>
+                                            <input hidden type="file" accept=".jpg,.jpeg,.png,.gif" id="file-input" onChange={(e) => uploadProfilePicture(e)}/>
+                                    </>
+                                    }>
+                                    <Avatar sx={{height: 100, width: 100}} alt="User" src={profilePicturePreview}  />
+                                </Badge>
+                            </Grid>
                             <Grid item xs={12} sm={6}>
                                 <TextField
                                     autoComplete="given-name"
@@ -246,27 +344,25 @@ const Register = () => {
                                     fullWidth
                                     name="password"
                                     label="Password"
-                                    type="password"
+                                    type={showPassword ? "text": "password"}
                                     id="password"
                                     autoComplete="new-password"
                                     onChange={e => handlePasswordChanged(e.target.value)}
                                     error={passwordError !== ''}
                                     helperText={passwordError}
+                                    InputProps={{ // <-- This is where the toggle button is added.
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    aria-label="toggle password visibility"
+                                                    onClick={handleClickShowPassword}
+                                                >
+                                                    {showPassword ? <Visibility /> : <VisibilityOff />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        )
+                                    }}
                                 />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <input
-                                    accept="image/*"
-                                    style={{ display: 'none' }}
-                                    id="raised-button-file"
-                                    multiple
-                                    type="file"
-                                />
-                                <label htmlFor="raised-button-file">
-                                    <Button type="button" >
-                                        Upload
-                                    </Button>
-                                </label>
                             </Grid>
                         </Grid>
                         <Button
@@ -288,7 +384,6 @@ const Register = () => {
                         </Grid>
                     </Box>
                 </Box>
-                <Copyright sx={{ mt: 5 }} />
             </Container>
         </ThemeProvider>
 
