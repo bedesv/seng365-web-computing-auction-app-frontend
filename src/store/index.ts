@@ -14,6 +14,7 @@ type MyStore = {
     auctions: Auction[],
     updateAuctions: (searchQuery: string) => void,
     searchQuery: string,
+    selectedAuction: number,
 }
 
 type MyPersist = (
@@ -31,7 +32,7 @@ export const  useStore = create<MyStore>(
         userToken: newUserToken,
         userProfilePicture: newProfilePicture
     })),
-    logout: () => set((state) => ({loggedIn: false, userId: -1, userToken: ""})),
+    logout: () => set(() => ({loggedIn: false, userId: -1, userToken: ""})),
     userId: -1,
     userToken: "",
     userProfilePicture: defaultProfilePicture,
@@ -44,10 +45,12 @@ export const  useStore = create<MyStore>(
                 return []
             })
         set(() => ({
-            auctions: newAuctions
+            auctions: newAuctions,
+            searchQuery: searchQuery
         }))
     },
-    searchQuery: ""
+    searchQuery: "",
+    selectedAuction: -1
     }),
     {
         name: "auth-storage"

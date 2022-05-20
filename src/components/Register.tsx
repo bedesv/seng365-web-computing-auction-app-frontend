@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Badge,
     Button,
@@ -45,6 +45,12 @@ const Register = () => {
     const userId = useStore(state => state.userId)
     const userToken = useStore(state => state.userToken)
     const saveUserLogin = useStore(state => state.login)
+
+    useEffect(() => {
+        if (userLoggedIn) {
+            navigate("/")
+        }
+    }, [] )
 
 
 

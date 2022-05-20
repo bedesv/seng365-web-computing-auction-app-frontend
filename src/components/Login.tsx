@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Button,
     createTheme,
@@ -41,6 +41,12 @@ const Login = () => {
 
         return (emErrors && passErrors)
     }
+
+    useEffect(() => {
+        if (userLoggedIn) {
+            navigate("/")
+        }
+    }, [] )
 
     const checkEmailErrors = (newEmail: string) => {
         if (!newEmail.match(emailRegex)) {
