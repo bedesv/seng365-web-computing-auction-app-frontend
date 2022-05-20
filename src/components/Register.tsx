@@ -210,8 +210,6 @@ const Register = () => {
         if (profilePictureType === 'image/jpg') {
             profilePictureType = 'image/jpeg'
         }
-        console.log(userToken)
-        console.log(userId)
 
         const requestHeaders = {
             headers: {

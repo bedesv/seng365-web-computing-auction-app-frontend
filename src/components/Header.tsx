@@ -23,10 +23,11 @@ const pages = ['Products', 'Pricing', 'Blog'];
 const Header = () => {
     const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(null);
     const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
-    const [searchQuery, setSearchQuery] = React.useState('')
+    let searchQuery = useStore(state => state.searchQuery)
     const userLoggedIn = useStore(state => state.loggedIn)
     const userProfilePicture = useStore(state => state.userProfilePicture)
     const logoutUser = useStore(state => state.logout)
+    const updateAuctions = useStore(state => state.updateAuctions)
     const navigate = useNavigate();
 
     const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -43,6 +44,10 @@ const Header = () => {
     const handleCloseUserMenu = () => {
         setAnchorElUser(null);
     };
+
+    function search() {
+        updateAuctions(searchQuery)
+    }
 
     return (
         <AppBar position="static">
@@ -138,12 +143,12 @@ const Header = () => {
                             <TextField
                                 id="search-bar"
                                 className="text"
-                                onChange={e => {setSearchQuery( e.target.value)}}
+                                onChange={e => {searchQuery = ( e.target.value)}}
                                 variant="outlined"
                                 placeholder="Search..."
                                 size="small"
                             />
-                            <IconButton type="submit" aria-label="search">
+                            <IconButton type="button" aria-label="search" onClick={search}>
                                 <SearchIcon style={{ fill: "blue" }} />
                             </IconButton>
                         </form>
