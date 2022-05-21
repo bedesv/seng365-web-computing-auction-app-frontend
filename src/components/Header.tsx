@@ -16,13 +16,9 @@ import {TextField} from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import {useStore} from "../store";
 import {useNavigate} from "react-router-dom";
-import {useState} from "react";
-
-const pages = ['Products', 'Pricing', 'Blog'];
-
+import {useEffect, useState} from "react";
 
 const Header = () => {
-    const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(null);
     const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
     const [searchBoxText, setSearchBoxText] = useState("")
     let searchQuery = useStore(state => state.searchQuery)
@@ -31,16 +27,12 @@ const Header = () => {
     const logoutUser = useStore(state => state.logout)
     const updateAuctions = useStore(state => state.updateAuctions)
     const navigate = useNavigate();
+    useEffect(() => {
+        updateAuctions(searchQuery)
+    }, [] )
 
-    const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
-        setAnchorElNav(event.currentTarget);
-    };
     const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorElUser(event.currentTarget);
-    };
-
-    const handleCloseNavMenu = () => {
-        setAnchorElNav(null);
     };
 
     const handleCloseUserMenu = () => {
@@ -49,7 +41,7 @@ const Header = () => {
 
     function search() {
         updateAuctions(searchBoxText)
-        navigate("/")
+        navigate("/auctions")
     }
 
     return (

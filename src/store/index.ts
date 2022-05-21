@@ -15,6 +15,9 @@ type MyStore = {
     updateAuctions: (searchQuery: string) => void,
     searchQuery: string,
     selectedAuction: number,
+    categories: Array<{categoryId: number, name: string}>,
+    updateCategories: () => void,
+    updateAuctionCategoryNames: () => void
 }
 
 type MyPersist = (
@@ -24,34 +27,60 @@ type MyPersist = (
 
 export const  useStore = create<MyStore>(
     (persist as unknown as MyPersist)(
-        ( set) => ({
-    loggedIn: false,
-    login: async (newUserId: number, newUserToken: string, newProfilePicture: string = defaultProfilePicture) => await set(() => ({
-        loggedIn: true,
-        userId: newUserId,
-        userToken: newUserToken,
-        userProfilePicture: newProfilePicture
-    })),
-    logout: () => set(() => ({loggedIn: false, userId: -1, userToken: ""})),
-    userId: -1,
-    userToken: "",
-    userProfilePicture: defaultProfilePicture,
-    auctions: [],
-    updateAuctions: async (searchQuery: string) => {
-        const newAuctions = await axios.get("http://localhost:4941/api/v1/auctions/", {params: {q: searchQuery}})
-            .then(response => {
-                return response.data.auctions
-            }).catch(err => {
-                return []
-            })
-        set(() => ({
-            auctions: newAuctions,
-            searchQuery: searchQuery
-        }))
-    },
-    searchQuery: "",
-    selectedAuction: -1
+        ( set, get) => ({
+        loggedIn: false,
+        login: async (newUserId: number, newUserToken: string, newProfilePicture: string = defaultProfilePicture) => await set(() => ({
+            loggedIn: true,
+            userId: newUserId,
+            userToken: newUserToken,
+            userProfilePicture: newProfilePicture
+        })),
+        logout: () => set(() => ({loggedIn: false, userId: -1, userToken: ""})),
+        userId: -1,
+        userToken: "",
+        userProfilePicture: defaultProfilePicture,
+        auctions: [],
+        updateAuctions: async (searchQuery: string) => {
+            const newAuctions = await axios.get("http://localhost:4941/api/v1/auctions/", {params: {q: searchQuery}})
+                .then(response => {
+                    return response.data.auctions
+                }).catch(err => {
+                    return []
+                })
+            set(() => ({
+                auctions: newAuctions,
+                searchQuery: searchQuery
+            }))
+            await get().updateCategories()
+        },
+        searchQuery: "",
+        selectedAuction: -1,
+        categories: [],
+        updateCategories: async () => {
+            let newCategories = await axios.get("http://localhost:4941/api/v1/auctions/categories")
+                .then(response => {
+                    return response.data
+                }).catch(err => {
+                    return []
+                })
+            set(() => ({
+                categories: newCategories,
+            }))
+            get().updateAuctionCategoryNames()
+        },
+        updateAuctionCategoryNames: () => set((state) => {
+            let updatedAuctions = state.auctions
+            for (let auction of updatedAuctions) {
+                for (let category of state.categories) {
+                    if (auction.categoryId === category.categoryId) {
+                        auction.categoryName = category.name
+                    }
+                }
+            }
+            return {auctions: updatedAuctions}
+        })
     }),
+
     {
         name: "auth-storage"
     }
