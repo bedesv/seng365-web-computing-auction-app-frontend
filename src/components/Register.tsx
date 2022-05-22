@@ -42,15 +42,13 @@ const Register = () => {
     const navigate = useNavigate();
     const acceptedImageFileTypes = ["image/jpg", "image/jpeg", "image/png", "image/gif"]
     const userLoggedIn = useStore(state => state.loggedIn)
-    const userId = useStore(state => state.userId)
-    const userToken = useStore(state => state.userToken)
     const saveUserLogin = useStore(state => state.login)
 
     useEffect(() => {
         if (userLoggedIn) {
             navigate("/")
         }
-    }, [] )
+    }, [userLoggedIn, navigate] )
 
 
 

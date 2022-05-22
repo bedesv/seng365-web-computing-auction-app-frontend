@@ -1,4 +1,4 @@
-import React, {SyntheticEvent, useState} from "react";
+import React, {SyntheticEvent} from "react";
 import {useStore} from "../store";
 import {
     Box,
@@ -21,16 +21,10 @@ import Avatar from "@mui/material/Avatar";
 
 
 const Auctions = () => {
-    let today: Date = new Date(Date.now())
-    const [globalError, setGlobalError] = useState('')
     const auctions = useStore(state => state.auctions)
     const updateAuctions = useStore(state => state.updateAuctions)
-    const [cardRaised, setCardRaised] = useState(false)
     let searchQuery = useStore(state => state.searchQuery)
-    let selectedAuction = useStore(state => state.selectedAuction)
     const categories = useStore(state => state.categories)
-    const updateCategories = useStore(state => state.updateCategories)
-    const updateAuctionCategoryNames = useStore(state => state.updateAuctionCategoryNames)
     const theme = createTheme();
     const navigate = useNavigate();
 
@@ -99,7 +93,7 @@ const Auctions = () => {
                                         >
                                             <CardMedia
                                                 component="img"
-                                                height="200"
+                                                height="300"
                                                 src={`http://localhost:4941/api/v1/auctions/${auction.auctionId}/image`}
                                                 alt="Auction image"
                                                 onError={(event: SyntheticEvent<HTMLImageElement>) => event.currentTarget.src = defaultAuctionImage}
@@ -113,7 +107,7 @@ const Auctions = () => {
                                                     </Grid>
                                                     <Grid item xs={7} style={{display: 'flex', alignItems: 'center'}} justifyContent="flex-end">
                                                         <Typography fontSize="14px">
-                                                            {calculateClosingTime(today, auction.endDate)}
+                                                            {calculateClosingTime(new Date(Date.now()), auction.endDate)}
                                                         </Typography>
                                                     </Grid>
                                                     <Grid item xs={12}>

@@ -1,5 +1,3 @@
-import axios from "axios";
-
 export type Auction = {
     auctionId: number,
     categoryId: number,
@@ -11,6 +9,7 @@ export type Auction = {
     sellerId: number,
     sellerLastName: string,
     title: string,
-    categoryName: string
+    categoryName: string,
+    description: string
 
 }

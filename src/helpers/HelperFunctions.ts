@@ -26,22 +26,34 @@ const calculateTimezoneOffsetInHoursAndMinutes = (date: Date) => {
 }
 
 export const calculateClosingTime = (today: Date, auctionEndDateString: string) : string => {
+    let closed;
     let yearDiff;
     let monthDiff;
     let dayDiff;
     const timezoneOffset = calculateTimezoneOffsetInHoursAndMinutes(today);
     auctionEndDateString = auctionEndDateString.slice(0,-1) + timezoneOffset;
 
-    [yearDiff, monthDiff, dayDiff] = dateDiff(today.toDateString(), auctionEndDateString)
+    [closed, yearDiff, monthDiff, dayDiff] = dateDiff(today.toDateString(), auctionEndDateString)
+
+
     if (monthDiff === 0 && yearDiff === 0 && (dayDiff === 1 || dayDiff === 0)) {
         if (dayDiff === 1) {
+            if (closed) {
+                return "Closed yesterday"
+            }
             return "Closes tomorrow"
         } else {
+            if (compareDateHours(today.toISOString(), auctionEndDateString)) {
+                return "Closed today"
+            }
             return "Closes today"
         }
     }
 
     let times = ["Closes in"]
+    if (closed) {
+        times = ["Closed"]
+    }
     if (yearDiff > 0) {
         if (yearDiff === 1) {
             times.push(`${yearDiff} year`)
@@ -64,24 +76,31 @@ export const calculateClosingTime = (today: Date, auctionEndDateString: string) 
         }
     }
 
+    let timeString;
     if (times.length === 2) {
-        return times.join(" ")
+        timeString =  times.join(" ")
     } else if (times.length === 3) {
-        return `${times[0]} ${times[1]} and ${times[2]}`
+        timeString =  `${times[0]} ${times[1]} and ${times[2]}`
     } else {
-        return `${times[0]} ${times[1]}, ${times[2]} and ${times[3]}`
+        timeString =  `${times[0]} ${times[1]}, ${times[2]} and ${times[3]}`
     }
 
-
+    if (closed) {
+        return timeString + " ago"
+    } else {
+        return timeString
+    }
 }
 
-export const dateDiff = (startingDate: string, endingDate: string) => {
+const dateDiff = (startingDate: string, endingDate: string) => {
+    let closed = false;
     let startDate = new Date(new Date(startingDate).toISOString().slice(0, 10));
     if (!endingDate) {
         endingDate = new Date().toISOString().slice(0, 10); // need date in YYYY-MM-DD format
     }
     let endDate = new Date(endingDate);
     if (startDate > endDate) {
+        closed = true;
         const swap = startDate;
         startDate = endDate;
         endDate = swap;
@@ -107,5 +126,19 @@ export const dateDiff = (startingDate: string, endingDate: string) => {
         dayDiff += daysInMonth[startDate.getUTCMonth()];
     }
 
-    return [yearDiff, monthDiff, dayDiff]
+    return [closed, yearDiff, monthDiff, dayDiff]
+}
+
+export const getPrettyDateString = (date: string) => {
+    return (new Date(date)).toLocaleString()
+}
+
+const compareDateHours = (startDate: string, endDate: string) => {
+    startDate = startDate.slice(11, 19)
+    endDate = endDate.slice(11, 19)
+    return (startDate > endDate)
+}
+
+export const checkAuctionEnded = (endDate: string) => {
+    return (new Date(Date.now())).toISOString() > endDate
 }

@@ -5,7 +5,6 @@ import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Menu from '@mui/material/Menu';
-import MenuIcon from '@mui/icons-material/Menu';
 import Container from '@mui/material/Container';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
@@ -27,9 +26,10 @@ const Header = () => {
     const logoutUser = useStore(state => state.logout)
     const updateAuctions = useStore(state => state.updateAuctions)
     const navigate = useNavigate();
+
     useEffect(() => {
         updateAuctions(searchQuery)
-    }, [] )
+    }, [updateAuctions, searchQuery] )
 
     const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorElUser(event.currentTarget);
@@ -89,7 +89,7 @@ const Header = () => {
                         <>
                             {userLoggedIn &&
                                 <Box sx={{flexGrow: 0, display: "flex", gap: "1rem"}}>
-                                    <Tooltip title="Open settings">
+                                    <Tooltip title="User Options">
                                         <IconButton onClick={handleOpenUserMenu} sx={{p: 0}}>
                                             <Avatar alt="Remy Sharp" src={userProfilePicture}/>
                                         </IconButton>

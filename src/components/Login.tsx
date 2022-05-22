@@ -31,8 +31,6 @@ const Login = () => {
     const theme = createTheme();
     const navigate = useNavigate();
     const userLoggedIn = useStore(state => state.loggedIn)
-    const userId = useStore(state => state.userId)
-    const userToken = useStore(state => state.userToken)
     const saveUserLogin = useStore(state => state.login)
 
     const checkErrors = () => {
@@ -46,7 +44,7 @@ const Login = () => {
         if (userLoggedIn) {
             navigate("/")
         }
-    }, [] )
+    }, [userLoggedIn, navigate] )
 
     const checkEmailErrors = (newEmail: string) => {
         if (!newEmail.match(emailRegex)) {
