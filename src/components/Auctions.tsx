@@ -1,4 +1,4 @@
-import React, {SyntheticEvent} from "react";
+import React, {SyntheticEvent, useEffect} from "react";
 import {useStore} from "../store";
 import {
     Box,
@@ -18,19 +18,21 @@ import {Auction} from "../types/Auction";
 import defaultAuctionImage from "../static/default-auction.png";
 import {calculateClosingTime} from "../helpers/HelperFunctions";
 import Avatar from "@mui/material/Avatar";
+import FilterBar from "./FilterBar";
 
 
 const Auctions = () => {
     const auctions = useStore(state => state.auctions)
-    const updateAuctions = useStore(state => state.updateAuctions)
-    let searchQuery = useStore(state => state.searchQuery)
     const categories = useStore(state => state.categories)
     const theme = createTheme();
     const navigate = useNavigate();
 
-    function search() {
-        updateAuctions(searchQuery)
-        navigate("/auctions")
+    const getCategory = (categoryId: number) => {
+        for (let category of categories) {
+            if (categoryId === category.categoryId) {
+                return category.name
+            }
+        }
     }
 
     return (
@@ -57,26 +59,11 @@ const Auctions = () => {
                             >
                                 Auctions
                             </Typography>
-                            {(searchQuery !== "") &&
-                                <>
-                                    <Typography variant="h5" align="center" color="text.secondary" paragraph>
-                                        {`Searching for: "${searchQuery}"`}
-                                    </Typography>
-                                    <Button
-                                        type="button"
-                                        fullWidth
-                                        variant="contained"
-                                        sx={{mt: 3, mb: 2}}
-                                        onClick={() => {searchQuery = ""; search()}}
-                                    >
-                                        Clear search
-                                    </Button>
-                                </>
-                            }
                         </Container>
                     </Box>
-                    <Container sx={{ py: 8 }} maxWidth="lg">
-                        <Grid container spacing={4}>
+                    <Container sx={{ py: 2, boxShadow: 2 }} maxWidth="lg">
+                        <FilterBar/>
+                        <Grid container spacing={4} sx={{pt: 5}}>
                             {auctions.map((auction: Auction) => (
                                 <Grid item key={auction.auctionId} xs={12} sm={6} md={4}>
                                     <Card
@@ -117,11 +104,11 @@ const Auctions = () => {
                                                     </Grid>
                                                     <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}} justifyContent="flex-start">
                                                         <Typography fontSize="14px">
-                                                            {`Category: ${auction.categoryName}`}
+                                                            {`Category: ${getCategory(auction.categoryId)}`}
                                                         </Typography>
                                                     </Grid>
                                                     <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}} justifyContent="flex-start">
-                                                        <Typography fontSize="14px">
+                                                        <Typography fontSize="18px">
                                                             {`Current bid: $` + (auction.highestBid !== null ? auction.highestBid : "0")}
                                                         </Typography>
                                                     </Grid>

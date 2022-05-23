@@ -13,7 +13,7 @@ import {
     Container,
     Grid,
     Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
-    TableRow,
+    TableRow, TextField,
     Typography
 } from "@mui/material";
 import defaultAuctionImage from "../static/default-auction.png";
@@ -28,7 +28,7 @@ const style = {
     left: '50%',
     transform: 'translate(-50%, -50%)',
     bgcolor: 'background.paper',
-    border: '2px solid #000',
+    borderRadius: 2,
     boxShadow: 24,
     p: 4,
 };
@@ -38,76 +38,82 @@ const SpecificAuction = () => {
     const auctions = useStore(state => state.auctions)
     const categories = useStore(state => state.categories)
     const userToken = useStore(state => state.userToken)
+    const userId = useStore(state => state.userId)
     const [selectedAuction, setSelectedAuction] = useState<Auction>()
     const [bids, setBids] = useState([])
     const [similarAuctions, setSimilarAuctions] = useState<Array<Auction>>([])
     const [highestBid, setHighestBid] = useState<Bid>()
     const [auctionEnded, setAuctionEnded] = useState(false)
     const [bidsModalOpen, setBidsModalOpen] = useState(false)
+    const [placeBidModalOpen, setPlaceBidModalOpen] = useState(false)
+    const [bidError, setBidError] = useState("")
+    const [placeBidError, setPlaceBidError] = useState("")
+    const [currentBid, setCurrentBid] = useState("1")
     let { auctionId } = useParams();
     const navigate = useNavigate();
 
+    const getAuction = async () => {
+        const foundAuction: Auction = await axios.get(`http://localhost:4941/api/v1/auctions/${auctionId}`)
+            .then(response => {
+                let auction = response.data
+                auction.categoryName = ""
+                return auction
+            }).catch(() => {
+                return undefined
+            })
+
+        if (foundAuction !== undefined) {
+            for (let category of categories) {
+                if (category.categoryId === foundAuction.categoryId) {
+                    foundAuction.categoryName = category.name
+                    break
+                }
+            }
+            await setSelectedAuction(foundAuction)
+            setAuctionEnded(checkAuctionEnded(foundAuction.endDate))
+            return foundAuction
+        } else {
+            navigate("/auctions")
+        }
+    }
+    const getBids = async () => {
+        const foundBids = await axios.get(`http://localhost:4941/api/v1/auctions/${auctionId}/bids`)
+            .then(response => {
+                return response.data
+            }).catch(() => {
+                return []
+            })
+        let foundHighestBid;
+        if (foundBids.length > 0) {
+            foundHighestBid = foundBids.at(0)
+            for (let bid of foundBids) {
+                if (bid.amount > foundHighestBid.amount) {
+                    foundHighestBid = bid
+                }
+            }
+            setHighestBid(foundHighestBid)
+            setCurrentBid(`${foundHighestBid.amount + 1}`)
+        } else {
+            setHighestBid(undefined)
+        }
+
+        setBids(foundBids)
+    }
+    const getSimilarAuctions = async (foundAuction: Auction) => {
+        await updateAuctions("")
+        let foundSimilarAuctions = []
+
+        for (let auction of auctions) {
+            if ((auction.categoryId === foundAuction.categoryId
+                    || auction.sellerId === foundAuction.sellerId)
+                && auction.auctionId !== foundAuction.auctionId) {
+                foundSimilarAuctions.push(auction)
+            }
+        }
+        await setSimilarAuctions(foundSimilarAuctions)
+    }
 
     useEffect(() => {
-        const getAuction = async () => {
-            const foundAuction: Auction = await axios.get(`http://localhost:4941/api/v1/auctions/${auctionId}`)
-                .then(response => {
-                    let auction = response.data
-                    auction.categoryName = ""
-                    return auction
-                }).catch(() => {
-                    return undefined
-                })
-
-            if (foundAuction !== undefined) {
-                for (let category of categories) {
-                    if (category.categoryId === foundAuction.categoryId) {
-                        foundAuction.categoryName = category.name
-                        break
-                    }
-                }
-                await setSelectedAuction(foundAuction)
-                setAuctionEnded(checkAuctionEnded(foundAuction.endDate))
-                return foundAuction
-            } else {
-                navigate("/auctions")
-            }
-        }
-        const getBids = async () => {
-            const foundBids = await axios.get(`http://localhost:4941/api/v1/auctions/${auctionId}/bids`)
-                .then(response => {
-                    return response.data
-                }).catch(() => {
-                    return []
-                })
-            let foundHighestBid;
-            if (foundBids.length > 0) {
-                foundHighestBid = foundBids.at(0)
-                for (let bid of foundBids) {
-                    if (bid.amount > foundHighestBid.amount) {
-                        foundHighestBid = bid
-                    }
-                }
-                setHighestBid(foundHighestBid)
-            } else {
-                setHighestBid(undefined)
-            }
-
-            setBids(foundBids)
-        }
-        const getSimilarAuctions = async (foundAuction: Auction) => {
-            await updateAuctions("")
-            let foundSimilarAuctions = []
-
-            for (let auction of auctions) {
-                if ((auction.categoryId === foundAuction.categoryId
-                    || auction.sellerId === foundAuction.sellerId)
-                    && auction.auctionId !== foundAuction.auctionId) {
-                    foundSimilarAuctions.push(auction)
-                }
-            }
-            await setSimilarAuctions(foundSimilarAuctions)
-        }
 
         getAuction().then((foundAuction) => {
             getBids().then()
@@ -119,17 +125,69 @@ const SpecificAuction = () => {
 
     const handleBidsModalOpen = () => {setBidsModalOpen(true)}
 
-
-
     const handleBidsModalClose = () => {setBidsModalOpen(false)}
 
+    const handlePlaceBidModalOpen = () => {
+        if (userToken === "" || userId === -1) {
+            navigate("/login")
+            return
+        }
+        setPlaceBidModalOpen(true)
+    }
 
+    const handlePlaceBidModalClose = () => {setPlaceBidModalOpen(false)}
+
+    const checkBid = (bid: string) => {
+        const highestBidValue = highestBid ? highestBid.amount : 0
+        if (Number.isNaN(Number(bid)) || bid.includes(".")) {
+            setCurrentBid(currentBid)
+            return false
+        }
+        setCurrentBid(bid)
+
+        if (Number(bid) <= highestBidValue) {
+            setBidError("Error: Bid must be more than the current bid of $" + highestBidValue)
+            return false
+        } else {
+            setBidError("")
+            return true
+        }
+    }
+
+
+    const placeBid = async () => {
+        if (!checkBid(currentBid)) {
+            return
+        }
+        const requestHeaders = {
+            headers: {
+                "X-Authorization": userToken
+            }
+        }
+        const placeBidResponse = await axios.post(`http://localhost:4941/api/v1/auctions/${auctionId}/bids`, {amount: parseInt(currentBid)}, requestHeaders)
+            .then(response => {
+                return response.status
+            }).catch(err => {
+                return err.response.status
+            })
+        if (placeBidResponse === 201) {
+            setPlaceBidError("")
+            handlePlaceBidModalClose()
+            await getBids()
+        } else if (placeBidResponse === 403) {
+            setPlaceBidError("Error: Someone else placed a bid before you")
+            await getBids()
+        } else {
+            setPlaceBidError("Server Error: Please try again")
+        }
+
+    }
 
     return (
         <>
             <Header/>
 
-            <Container sx={{ py: 8 }} maxWidth="lg">
+            <Container sx={{ py: 8}} maxWidth="lg">
                 {selectedAuction !== undefined &&
                     <Card>
                         <Grid container>
@@ -164,24 +222,29 @@ const SpecificAuction = () => {
                                             {`Reserve: $${selectedAuction.reserve}`}
                                         </Typography>
                                         <Typography fontSize="12px" sx={{pl: 2}}>
-                                            {"Reserve " + (selectedAuction.highestBid < selectedAuction.reserve ? "not met" : "met")}
+                                            {"Reserve " + (highestBid === undefined || highestBid.amount < selectedAuction.reserve ? "not met" : "met")}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={3} style={{display: 'flex', alignItems: 'center'}}
+                                    <Grid item xs={6} style={{display: 'flex', alignItems: 'center'}}
                                           justifyContent="flex-start">
                                         <Typography fontSize="14px" align="left" sx={{pt: 2, pl: 5}}>
-                                            {`${bids.length} ` + (bids.length == 1 ? "bid" : "bids")}<br/>
-                                            {`Current bid: $` + (selectedAuction.highestBid !== null ? selectedAuction.highestBid : "0")}<br/>
-                                            {selectedAuction.highestBid !== null && highestBid !== undefined && `Placed by ${highestBid.firstName} ${highestBid.lastName}`}
+                                            {`${bids.length} ` + (bids.length === 1 ? "bid" : "bids")}<br/>
+                                            {`Current bid: $` + (highestBid !== undefined ? highestBid.amount : "0")}<br/>
+                                            {highestBid !== undefined && `Placed by ${highestBid.firstName} ${highestBid.lastName}`}
                                         </Typography>
                                     </Grid>
-                                    <Grid item xs={3} style={{display: 'flex', alignItems: 'center'}}
-                                          justifyContent="center">
-                                        <Button type={"button"} variant="contained" sx={{mt: 2}} onClick={handleBidsModalOpen}>
+
+                                    <Grid item xs={6}>
+                                        <Typography fontSize="14px" sx={{pl: 2, pt: 2}} align="left">
+                                            {selectedAuction.description}
+                                        </Typography>
+                                    </Grid>
+                                    <Grid item xs={6} style={{display: 'flex', alignItems: 'start'}} justifyContent="flex-start">
+                                        <Button type={"button"} variant="contained" sx={{mt: 2, ml: 5}} onClick={handleBidsModalOpen}>
                                             View Bids
                                         </Button>
-                                        {userToken !== "" && !auctionEnded &&
-                                            <Button type={"button"} variant="contained" sx={{mt: 2}} onClick={handleBidsModalOpen}>
+                                        {!auctionEnded && selectedAuction.sellerId !== userId &&
+                                            <Button type={"button"} variant="contained" sx={{mt: 2, ml: 2}} onClick={handlePlaceBidModalOpen}>
                                                 Place Bid
                                             </Button>
                                         }
@@ -230,11 +293,49 @@ const SpecificAuction = () => {
                                                 </TableContainer>
                                             </Box>
                                         </Modal>
-                                    </Grid>
-                                    <Grid item xs={6}>
-                                        <Typography fontSize="14px" sx={{pl: 2, pt: 2}} align="left">
-                                            {selectedAuction.description}
-                                        </Typography>
+                                        <Modal
+                                            open={placeBidModalOpen}
+                                            onClose={handlePlaceBidModalClose}
+                                        >
+                                            <Box sx={style}>
+
+
+                                                <Grid container>
+                                                    <Grid item xs={1}/>
+                                                    <Grid item xs={11} style={{display: 'flex', alignItems: 'top'}} justifyContent={"flex-start"}>
+                                                        <Typography id="modal-modal-title" variant="h6" component="h2" >
+                                                            Place Bid
+                                                        </Typography> <br/>
+                                                    </Grid>
+                                                    <Grid item xs={1}/>
+                                                    <Grid item xs={11} style={{display: 'flex', alignItems: 'top'}} justifyContent={"flex-start"}>
+                                                        <Typography variant="h6" color="error.main">
+                                                            {placeBidError}
+                                                        </Typography>
+                                                    </Grid>
+
+                                                    <Grid item xs={1} style={{display: 'flex', alignItems: 'center'}} justifyContent={"flex-center"}>
+                                                        <Typography fontSize="20px">
+                                                            $
+                                                        </Typography>
+                                                    </Grid>
+                                                    <Grid item xs={7} >
+                                                        <TextField type="text"
+                                                                   value={currentBid}
+                                                                   onChange={e => checkBid(e.target.value)}
+                                                                   error={bidError !== ''}
+                                                                   helperText={bidError}
+                                                        />
+                                                    </Grid>
+                                                    <Grid item xs={4} style={{display: 'flex', alignItems: 'center'}} justifyContent={"flex-start"}>
+                                                        <Button type={"button"} variant="contained" sx={{ ml: 2}} onClick={placeBid}>
+                                                            Place Bid
+                                                        </Button>
+                                                    </Grid>
+
+                                                </Grid>
+                                            </Box>
+                                        </Modal>
                                     </Grid>
                                 </Grid>
                             </Grid>

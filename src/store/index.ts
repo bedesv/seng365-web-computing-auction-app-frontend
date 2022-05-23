@@ -3,6 +3,7 @@ import {persist, PersistOptions} from "zustand/middleware"
 import defaultProfilePicture from "../static/default-profile.jpg"
 import {Auction} from "../types/Auction";
 import axios from "axios";
+import {checkAuctionEnded} from "../helpers/HelperFunctions";
 
 type MyStore = {
     loggedIn: boolean,
@@ -12,12 +13,10 @@ type MyStore = {
     userToken: string,
     userProfilePicture: string,
     auctions: Auction[],
-    updateAuctions: (searchQuery: string) => void,
-    searchQuery: string,
+    updateAuctions: (searchQuery?: string, categoryNames?: string[], closedAuctions?: number, sortOrder?: number) => void
     selectedAuction: number,
     categories: Array<{categoryId: number, name: string}>,
     updateCategories: () => void,
-    updateAuctionCategoryNames: () => void
 }
 
 type MyPersist = (
@@ -40,20 +39,57 @@ export const  useStore = create<MyStore>(
         userToken: "",
         userProfilePicture: defaultProfilePicture,
         auctions: [],
-        updateAuctions: async (searchQuery: string) => {
-            const newAuctions = await axios.get("http://localhost:4941/api/v1/auctions/", {params: {q: searchQuery}})
+        updateAuctions: async (searchQuery: string = "", categoryNames: string[] = [], closedAuctions: number = -1, sortOrder = 0) => {
+            let categoryIdList: number[] = []
+            for (let categoryName of categoryNames) {
+                for (let category of get().categories) {
+                    if (categoryName === category.name) {
+                        categoryIdList.push(category.categoryId)
+                    }
+                }
+            }
+            let sortOrderString;
+            switch (sortOrder) {
+                case 1: {sortOrderString = "CLOSING_LAST"; break}
+                case 2: {sortOrderString = "ALPHABETICAL_ASC"; break}
+                case 3: {sortOrderString = "ALPHABETICAL_DESC"; break}
+                case 4: {sortOrderString = "BIDS_ASC"; break}
+                case 5: {sortOrderString = "BIDS_DESC"; break}
+                case 6: {sortOrderString = "RESERVE_ASC"; break}
+                case 7: {sortOrderString = "RESERVE_DESC"; break}
+                default: {sortOrderString = "CLOSING_SOON"; break}
+            }
+            const newAuctions = await axios.get("http://localhost:4941/api/v1/auctions/", {params: {q: searchQuery, categoryIds: categoryIdList, sortBy: sortOrderString}})
                 .then(response => {
                     return response.data.auctions
                 }).catch(err => {
                     return []
                 })
+
+            let foundAuctions: Auction[] = [];
+            // Open auctions only
+            if (closedAuctions === 0) {
+                for (let auction of newAuctions) {
+                    if (!checkAuctionEnded(auction.endDate)) {
+                        foundAuctions.push(auction)
+                    }
+                }
+            // Closed auctions only
+            } else if (closedAuctions === 1) {
+                for (let auction of newAuctions) {
+                    if (checkAuctionEnded(auction.endDate)) {
+                        foundAuctions.push(auction)
+                    }
+                }
+
+            } else {
+                foundAuctions = newAuctions
+            }
             set(() => ({
-                auctions: newAuctions,
-                searchQuery: searchQuery
+                auctions: foundAuctions
             }))
             await get().updateCategories()
         },
-        searchQuery: "",
         selectedAuction: -1,
         categories: [],
         updateCategories: async () => {
@@ -66,19 +102,7 @@ export const  useStore = create<MyStore>(
             set(() => ({
                 categories: newCategories,
             }))
-            get().updateAuctionCategoryNames()
         },
-        updateAuctionCategoryNames: () => set((state) => {
-            let updatedAuctions = state.auctions
-            for (let auction of updatedAuctions) {
-                for (let category of state.categories) {
-                    if (auction.categoryId === category.categoryId) {
-                        auction.categoryName = category.name
-                    }
-                }
-            }
-            return {auctions: updatedAuctions}
-        })
     }),
 
     {
