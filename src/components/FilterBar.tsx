@@ -9,10 +9,10 @@ import {
     Toolbar
 } from "@mui/material";
 import * as React from "react";
-import {useNavigate} from "react-router-dom";
-import {useState} from "react";
 import {useStore} from "../store";
 import {numberOfAuctionsPerPage} from "./Pages";
+import {useEffect} from "react";
+import {getAuctionsUserBiddedOn, getUsersAuctions} from "../helpers/HelperFunctions";
 
 const sortOrders = ["Closing Date - Asc", "Closing Date - Desc", "Title - Asc", "Title - Desc", "Current Bid - Asc", "Current Bid - Desc", "Reserve - Asc", "Reserve - Desc"]
 
@@ -29,8 +29,9 @@ const FilterBar = () => {
     const categories = useStore(state => state.categories)
     const setAuctionsOnPage = useStore(state => state.setAuctionsOnPage)
 
-    const navigate = useNavigate();
-
+    useEffect(() => {
+        search()
+    }, [])
     function search() {
         let auctionOpenClosed = -1;
         if (openClosed.length === 1) {

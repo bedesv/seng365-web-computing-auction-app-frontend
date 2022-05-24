@@ -17,7 +17,13 @@ import {
     Typography
 } from "@mui/material";
 import defaultAuctionImage from "../static/default-auction.png";
-import {calculateClosingTime, checkAuctionEnded, getAuctions, getPrettyDateString} from "../helpers/HelperFunctions";
+import {
+    calculateClosingTime,
+    checkAuctionEnded,
+    getAuctionBids,
+    getAuctions, getCategory,
+    getPrettyDateString
+} from "../helpers/HelperFunctions";
 import Avatar from "@mui/material/Avatar";
 import axios from "axios";
 import {Bid} from "../types/Bid";
@@ -44,6 +50,8 @@ const SpecificAuction = () => {
     const [auctionEnded, setAuctionEnded] = useState(false)
     const [bidsModalOpen, setBidsModalOpen] = useState(false)
     const [placeBidModalOpen, setPlaceBidModalOpen] = useState(false)
+    const [deleteAuctionModalOpen, setDeleteAuctionModalOpen] = useState(false)
+    const [deleteAuctionError, setDeleteAuctionError] = useState("")
     const [bidError, setBidError] = useState("")
     const [placeBidError, setPlaceBidError] = useState("")
     const [currentBid, setCurrentBid] = useState("1")
@@ -75,12 +83,7 @@ const SpecificAuction = () => {
         }
     }
     const getBids = async () => {
-        const foundBids = await axios.get(`http://localhost:4941/api/v1/auctions/${auctionId}/bids`)
-            .then(response => {
-                return response.data
-            }).catch(() => {
-                return []
-            })
+        const foundBids = await getAuctionBids(auctionId as string)
         let foundHighestBid;
         if (foundBids.length > 0) {
             foundHighestBid = foundBids.at(0)
@@ -94,7 +97,6 @@ const SpecificAuction = () => {
         } else {
             setHighestBid(undefined)
         }
-
         setBids(foundBids)
     }
     const getSimilarAuctions = async (foundAuction: Auction) => {
@@ -125,6 +127,10 @@ const SpecificAuction = () => {
 
     const handleBidsModalClose = () => {setBidsModalOpen(false)}
 
+    const handleDeleteAuctionModalOpen = () => {setDeleteAuctionModalOpen(true)}
+
+    const handleDeleteAuctionModalClose = () => {setDeleteAuctionModalOpen(false)}
+
     const handlePlaceBidModalOpen = () => {
         if (userToken === "" || userId === -1) {
             navigate("/login")
@@ -149,6 +155,30 @@ const SpecificAuction = () => {
         } else {
             setBidError("")
             return true
+        }
+    }
+
+    const handleDeleteAuction = async () => {
+
+        const requestHeaders = {
+            headers: {
+                "X-Authorization": userToken
+            }
+        }
+        const deleteAuctionResponse = await axios.delete(`http://localhost:4941/api/v1/auctions/${auctionId}`,requestHeaders)
+            .then((response) => {
+                return response
+            }).catch((err) => {
+                return err.response
+            })
+
+        if (deleteAuctionResponse.status === 200) {
+            setDeleteAuctionError("")
+            setDeleteAuctionModalOpen(false)
+            navigate("/")
+            return
+        } else {
+            setDeleteAuctionError("Server Error: Please try again")
         }
     }
 
@@ -214,7 +244,7 @@ const SpecificAuction = () => {
                                     </Grid>
                                     <Grid item xs={6} textAlign={"left"}>
                                         <Typography fontSize="14px" sx={{pl: 2}}>
-                                            {`Category: ${selectedAuction.categoryName}`}
+                                            {`Category: ${getCategory(selectedAuction.categoryId, categories)}`}
                                         </Typography>
                                         <Typography fontSize="18px" sx={{pl: 2, pt: 2}}>
                                             {`Reserve: $${selectedAuction.reserve}`}
@@ -244,6 +274,11 @@ const SpecificAuction = () => {
                                         {!auctionEnded && selectedAuction.sellerId !== userId &&
                                             <Button type={"button"} variant="contained" sx={{mt: 2, ml: 2}} onClick={handlePlaceBidModalOpen}>
                                                 Place Bid
+                                            </Button>
+                                        }
+                                        {bids.length === 0 && selectedAuction.sellerId === userId &&
+                                            <Button type={"button"} variant="contained" sx={{mt: 2, ml: 2}} onClick={handleDeleteAuctionModalOpen}>
+                                                Delete Auction
                                             </Button>
                                         }
                                         <Modal
@@ -296,8 +331,6 @@ const SpecificAuction = () => {
                                             onClose={handlePlaceBidModalClose}
                                         >
                                             <Box sx={style}>
-
-
                                                 <Grid container>
                                                     <Grid item xs={1}/>
                                                     <Grid item xs={11} style={{display: 'flex', alignItems: 'top'}} justifyContent={"flex-start"}>
@@ -332,6 +365,36 @@ const SpecificAuction = () => {
                                                     </Grid>
 
                                                 </Grid>
+                                            </Box>
+                                        </Modal>
+
+                                        <Modal
+                                            open={deleteAuctionModalOpen}
+                                            onClose={handleDeleteAuctionModalClose}
+                                        >
+                                            <Box sx={style}>
+                                                <Grid container>
+                                                    <Grid item xs={12}>
+                                                        <Typography variant="h6" color="error.main">
+                                                            {deleteAuctionError}
+                                                        </Typography>
+                                                    </Grid>
+                                                    <Grid item xs={12}>
+                                                        <Typography id="modal-modal-title" variant="h6" component="h2">
+                                                            Are you sure you want to delete this auction
+                                                        </Typography>
+                                                    </Grid>
+                                                    <Grid item xs={12} sx={{display: "flex", align:"center"}}>
+                                                        <Button type={"button"} variant="contained" sx={{ ml: 2}} onClick={handleDeleteAuctionModalClose}>
+                                                            No
+                                                        </Button>
+                                                        <Button type={"button"} variant="contained" sx={{ ml: 2}} onClick={handleDeleteAuction}>
+                                                            Yes, I want to delete this auction
+                                                        </Button>
+                                                    </Grid>
+                                                </Grid>
+
+
                                             </Box>
                                         </Modal>
                                     </Grid>
@@ -399,7 +462,7 @@ const SpecificAuction = () => {
                                             <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}}
                                                   justifyContent="flex-start">
                                                 <Typography fontSize="14px">
-                                                    {`Category: ${auction.categoryName}`}
+                                                    {`Category: ${getCategory(auction.categoryId, categories)}`}
                                                 </Typography>
                                             </Grid>
                                             <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}}

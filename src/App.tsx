@@ -1,11 +1,11 @@
 import React from 'react';
 import './App.css';
 import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
-import Home from "./components/Home"
 import Register from "./components/Register";
 import Login from "./components/Login"
 import Auctions from "./components/Auctions";
 import SpecificAuction from "./components/SpecificAuction";
+import MyAuctions from "./components/MyAuctions";
 
 function App() {
   return (
@@ -18,6 +18,7 @@ function App() {
                 <Route path="/" element={<Auctions />}/>
                 <Route path="/auctions" element={<Auctions />}/>
                 <Route path="/auctions/:auctionId" element={<SpecificAuction />}/>
+                <Route path="/myAuctions" element = {<MyAuctions />} />
             </Routes>
           </div>
         </Router>

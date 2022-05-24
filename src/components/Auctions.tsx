@@ -7,7 +7,7 @@ import {
     Container,
     createTheme,
     CssBaseline,
-    Grid, Pagination, Stack,
+    Grid,
     ThemeProvider,
     Typography
 } from "@mui/material";
@@ -15,7 +15,7 @@ import {useNavigate} from "react-router-dom";
 import Header from "./Header";
 import {Auction} from "../types/Auction";
 import defaultAuctionImage from "../static/default-auction.png";
-import {calculateClosingTime} from "../helpers/HelperFunctions";
+import {calculateClosingTime, getCategory} from "../helpers/HelperFunctions";
 import Avatar from "@mui/material/Avatar";
 import FilterBar from "./FilterBar";
 import Pages from "./Pages";
@@ -28,14 +28,6 @@ const Auctions = () => {
     const currentPage = useStore(state => state.currentPage)
     const theme = createTheme();
     const navigate = useNavigate();
-
-    const getCategory = (categoryId: number) => {
-        for (let category of categories) {
-            if (categoryId === category.categoryId) {
-                return category.name
-            }
-        }
-    }
 
     return (
         <>
@@ -109,7 +101,7 @@ const Auctions = () => {
                                                     </Grid>
                                                     <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}} justifyContent="flex-start">
                                                         <Typography fontSize="14px">
-                                                            {`Category: ${getCategory(auction.categoryId)}`}
+                                                            {`Category: ${getCategory(auction.categoryId, categories)}`}
                                                         </Typography>
                                                     </Grid>
                                                     <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}} justifyContent="flex-start">

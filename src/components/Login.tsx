@@ -16,8 +16,7 @@ import Box from "@mui/material/Box";
 import {useNavigate} from "react-router-dom";
 import Header from "./Header";
 import {useStore} from "../store";
-
-const emailRegex = "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+(?:[A-Za-z]{2}|com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|museum)\\b$"
+import {emailRegex} from "../helpers/HelperFunctions";
 
 const Login = () => {
     // create state and error message variables for each input

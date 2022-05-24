@@ -1,4 +1,8 @@
 import axios from "axios";
+import {Auction} from "../types/Auction";
+
+export const emailRegex = "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+(?:[A-Za-z]{2}|com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|museum)\\b$"
+export const acceptedImageFileTypes = ["image/jpg", "image/jpeg", "image/png", "image/gif"]
 
 const calculateTimezoneOffsetInHoursAndMinutes = (date: Date) => {
     const offsetMinutes = date.getTimezoneOffset() * -1
@@ -152,4 +156,73 @@ export const getAuctions = async () => {
         }).catch(() => {
             return []
         })
+}
+
+export const getAuctionBids = async (auctionId: string) => {
+    return await axios.get(`http://localhost:4941/api/v1/auctions/${auctionId}/bids`)
+        .then(response => {
+            return response.data
+        }).catch(() => {
+            return []
+        })
+}
+
+
+export const getUsersAuctions = async (userId: number) => {
+    const auctions = await getAuctions()
+    const usersAuctions: Auction[] = []
+
+    for (let auction of auctions) {
+        if (auction.sellerId === userId) {
+            usersAuctions.push(auction)
+        }
+    }
+
+    return usersAuctions
+
+}
+
+export const getAuctionsUserBiddedOn = async (userId: number) => {
+    const auctions = await getAuctions()
+    const auctionsUserBiddedOn: Auction[] = []
+    let auctionBids
+
+    for (let auction of auctions) {
+        if (auction.sellerId !== userId) {
+            auctionBids = await getAuctionBids(auction.auctionId.toString())
+            for (let bid of auctionBids) {
+                if (bid.bidderId === userId) {
+                    auctionsUserBiddedOn.push(auction)
+                    break
+                }
+            }
+        }
+    }
+    return auctionsUserBiddedOn
+}
+
+export const getCategory = (categoryId: number, categories: any) => {
+    for (let category of categories) {
+        if (categoryId === category.categoryId) {
+            return category.name
+        }
+    }
+}
+
+export const getCategoryId = (categoryName: string, categories: any) => {
+    for (let category of categories) {
+        if (categoryName === category.name) {
+            return category.categoryId
+        }
+    }
+}
+
+export const isEmptyOrSpaces = (str: string) => {
+    return str === null || str.match(/^\s*$/) !== null;
+}
+
+export const convertDateStringForInput = (date: Date) => {
+    var tzoffset = date.getTimezoneOffset() * 60000; //offset in milliseconds
+    return (new Date(date.getTime() - tzoffset)).toISOString().slice(0, -8);
+
 }

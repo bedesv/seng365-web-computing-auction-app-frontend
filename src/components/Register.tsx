@@ -20,8 +20,7 @@ import {useNavigate} from "react-router-dom";
 import Header from "./Header";
 import defaultProfilePicture from "../static/default-profile.jpg"
 import {useStore} from "../store";
-
-const emailRegex = "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+(?:[A-Za-z]{2}|com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|museum)\\b$"
+import {acceptedImageFileTypes, emailRegex, isEmptyOrSpaces} from "../helpers/HelperFunctions";
 
 const Register = () => {
     // create state and error message variables for each input
@@ -40,7 +39,6 @@ const Register = () => {
     const handleClickShowPassword = () => setShowPassword(!showPassword);
     const theme = createTheme();
     const navigate = useNavigate();
-    const acceptedImageFileTypes = ["image/jpg", "image/jpeg", "image/png", "image/gif"]
     const userLoggedIn = useStore(state => state.loggedIn)
     const saveUserLogin = useStore(state => state.login)
 
@@ -64,6 +62,8 @@ const Register = () => {
     const checkFirstNameErrors = (newFirstName: string) => {
         if (newFirstName.length < 1 || newFirstName.length > 64) {
             setFirstNameError("Error: First name must be between 1 and 64 characters")
+        } else if (isEmptyOrSpaces(newFirstName)) {
+            setFirstNameError("Error: First name must not be blank")
         } else {
             setFirstNameError('')
             return true
@@ -74,6 +74,8 @@ const Register = () => {
     const checkLastNameErrors = (newLastName: string) => {
         if (newLastName.length < 1 || newLastName.length > 64) {
             setLastNameError("Error: Last name must be between 1 and 64 characters")
+        } else if (isEmptyOrSpaces(newLastName)) {
+            setLastNameError("Error: Last name must not be blank")
         } else {
             setLastNameError('')
             return true
@@ -226,7 +228,7 @@ const Register = () => {
                 return response
             })
             .catch((err) => {
-                setGlobalError("Error saving profile picture: Please try again in the account settings page")
+                setGlobalError("Error saving profile picture: Please try again in the profile page")
                 return err.response
             })
         return saveProfilePictureResponse.status
