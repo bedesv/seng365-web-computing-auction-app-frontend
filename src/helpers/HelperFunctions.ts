@@ -1,3 +1,5 @@
+import axios from "axios";
+
 const calculateTimezoneOffsetInHoursAndMinutes = (date: Date) => {
     const offsetMinutes = date.getTimezoneOffset() * -1
 
@@ -141,4 +143,13 @@ const compareDateHours = (startDate: string, endDate: string) => {
 
 export const checkAuctionEnded = (endDate: string) => {
     return (new Date(Date.now())).toISOString() > endDate
+}
+
+export const getAuctions = async () => {
+    return await axios.get("http://localhost:4941/api/v1/auctions/")
+        .then(response => {
+            return response.data.auctions
+        }).catch(() => {
+            return []
+        })
 }

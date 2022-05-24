@@ -1,14 +1,13 @@
-import React, {SyntheticEvent, useEffect} from "react";
+import React, {SyntheticEvent} from "react";
 import {useStore} from "../store";
 import {
     Box,
-    Button,
     Card,
     CardActionArea, CardContent, CardMedia,
     Container,
     createTheme,
     CssBaseline,
-    Grid,
+    Grid, Pagination, Stack,
     ThemeProvider,
     Typography
 } from "@mui/material";
@@ -19,11 +18,14 @@ import defaultAuctionImage from "../static/default-auction.png";
 import {calculateClosingTime} from "../helpers/HelperFunctions";
 import Avatar from "@mui/material/Avatar";
 import FilterBar from "./FilterBar";
+import Pages from "./Pages";
 
 
 const Auctions = () => {
     const auctions = useStore(state => state.auctions)
     const categories = useStore(state => state.categories)
+    const auctionsOnPage = useStore(state => state.auctionsOnPage)
+    const currentPage = useStore(state => state.currentPage)
     const theme = createTheme();
     const navigate = useNavigate();
 
@@ -64,7 +66,10 @@ const Auctions = () => {
                     <Container sx={{ py: 2, boxShadow: 2 }} maxWidth="lg">
                         <FilterBar/>
                         <Grid container spacing={4} sx={{pt: 5}}>
-                            {auctions.map((auction: Auction) => (
+                            <Grid item xs={12} sx={{display: "flex"}} justifyContent={"center"}>
+                                <Pages/>
+                            </Grid>
+                            {auctions.slice(auctionsOnPage * (currentPage - 1), auctionsOnPage * currentPage).map((auction: Auction) => (
                                 <Grid item key={auction.auctionId} xs={12} sm={6} md={4}>
                                     <Card
                                         sx={{
@@ -124,7 +129,11 @@ const Auctions = () => {
                                     </Card>
                                 </Grid>
                             ))}
+                            <Grid item xs={12} sx={{display: "flex"}} justifyContent={"center"}>
+                                <Pages/>
+                            </Grid>
                         </Grid>
+
                     </Container>
                 </main>
             </ThemeProvider>

@@ -17,7 +17,7 @@ import {
     Typography
 } from "@mui/material";
 import defaultAuctionImage from "../static/default-auction.png";
-import {calculateClosingTime, checkAuctionEnded, getPrettyDateString} from "../helpers/HelperFunctions";
+import {calculateClosingTime, checkAuctionEnded, getAuctions, getPrettyDateString} from "../helpers/HelperFunctions";
 import Avatar from "@mui/material/Avatar";
 import axios from "axios";
 import {Bid} from "../types/Bid";
@@ -34,8 +34,6 @@ const style = {
 };
 
 const SpecificAuction = () => {
-    const updateAuctions = useStore(state => state.updateAuctions)
-    const auctions = useStore(state => state.auctions)
     const categories = useStore(state => state.categories)
     const userToken = useStore(state => state.userToken)
     const userId = useStore(state => state.userId)
@@ -100,10 +98,10 @@ const SpecificAuction = () => {
         setBids(foundBids)
     }
     const getSimilarAuctions = async (foundAuction: Auction) => {
-        await updateAuctions("")
+        let allAuctions = await getAuctions()
         let foundSimilarAuctions = []
 
-        for (let auction of auctions) {
+        for (let auction of allAuctions) {
             if ((auction.categoryId === foundAuction.categoryId
                     || auction.sellerId === foundAuction.sellerId)
                 && auction.auctionId !== foundAuction.auctionId) {

@@ -12,16 +12,22 @@ import * as React from "react";
 import {useNavigate} from "react-router-dom";
 import {useState} from "react";
 import {useStore} from "../store";
+import {numberOfAuctionsPerPage} from "./Pages";
 
 const sortOrders = ["Closing Date - Asc", "Closing Date - Desc", "Title - Asc", "Title - Desc", "Current Bid - Asc", "Current Bid - Desc", "Reserve - Asc", "Reserve - Desc"]
 
 const FilterBar = () => {
-    const [searchBoxText, setSearchBoxText] = useState("")
-    const [categoryNames, setCategoryNames] = useState<string[]>([]);
-    const [openClosed, setOpenClosed] = useState<string[]>([]);
-    const [sortOrder, setSortOrder] = useState(sortOrders.at(0))
+    const searchQuery = useStore(state => state.searchQuery)
+    const setSearchQuery = useStore(state => state.setSearchQuery)
+    const categoryNames = useStore(state => state.categoryNames)
+    const setCategoryNames = useStore(state => state.setCategoryNames)
+    const openClosed = useStore(state => state.openClosed)
+    const setOpenClosed = useStore(state => state.setOpenClosed)
+    const sortOrder = useStore(state => state.sortOrder)
+    const setSortOrder = useStore(state => state.setSortOrder)
     const updateAuctions = useStore(state => state.updateAuctions)
     const categories = useStore(state => state.categories)
+    const setAuctionsOnPage = useStore(state => state.setAuctionsOnPage)
 
     const navigate = useNavigate();
 
@@ -35,14 +41,15 @@ const FilterBar = () => {
             }
         }
         const sortOrderIndex = sortOrders.indexOf(sortOrder as string)
-        updateAuctions(searchBoxText, categoryNames, auctionOpenClosed, sortOrderIndex)
+        updateAuctions(searchQuery, categoryNames, auctionOpenClosed, sortOrderIndex)
     }
 
     const clearFilters = async () => {
-        await setSearchBoxText("")
-        await setCategoryNames([])
-        await setOpenClosed([])
-        await setSortOrder(sortOrders.at(0))
+        setSearchQuery("")
+        setCategoryNames([])
+        setOpenClosed([])
+        setSortOrder(sortOrders.at(0) as string)
+        setAuctionsOnPage(numberOfAuctionsPerPage.at(0) as number)
         updateAuctions()
     }
 
@@ -90,12 +97,14 @@ const FilterBar = () => {
                                 >
                                     <MenuItem
                                         value={"Open"}
+                                        key={"Open"}
                                     >
                                         <Checkbox checked={openClosed.indexOf("Open") > -1} />
                                         <ListItemText primary={"Open"}/>
                                     </MenuItem>
                                     <MenuItem
                                         value={"Closed"}
+                                        key={"Closed"}
                                     >
                                         <Checkbox checked={openClosed.indexOf("Closed") > -1} />
                                         <ListItemText primary={"Closed"}/>
@@ -103,7 +112,7 @@ const FilterBar = () => {
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid item xs={3} sx={{ flexGrow: 0, display: 'flex', alignItems: "center", borderRadius: 1}}>
+                        <Grid item xs={2} sx={{ flexGrow: 0, display: 'flex', alignItems: "center", borderRadius: 1}}>
                             <FormControl
                                 sx={{m: 1, width: 300 }}
                             >
@@ -113,9 +122,7 @@ const FilterBar = () => {
                                     value={categoryNames}
                                     onChange={handleCategoryAdd}
                                     renderValue={(selected) => selected.join(', ')}
-                                    // label="Category"
                                     labelId={"select-label"}
-                                    // style={{width: 250, maxHeight: 40}}
                                     MenuProps={{PaperProps: {sx: {maxHeight: 300}}}}
                                 >
                                     {categories.map((category: { categoryId: number; name: string; }) => (
@@ -130,7 +137,7 @@ const FilterBar = () => {
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid item xs={4} sx={{ flexGrow: 0, display: 'flex', alignItems: "center", borderRadius: 1}}>
+                        <Grid item xs={2} sx={{ flexGrow: 0, display: 'flex', alignItems: "center", borderRadius: 1}}>
                             <form onSubmit={async (e: { preventDefault: () => void; }) => {
                                 await search();
                                 e.preventDefault()
@@ -138,11 +145,10 @@ const FilterBar = () => {
                                 <TextField
                                     id="search-bar"
                                     className="text"
-                                    value={searchBoxText}
-                                    onChange={e => {setSearchBoxText(e.target.value)}}
+                                    value={searchQuery}
+                                    onChange={e => {setSearchQuery(e.target.value)}}
                                     variant="outlined"
                                     placeholder="Search..."
-                                    size="small"
                                 />
                             </form>
                         </Grid>
@@ -160,6 +166,7 @@ const FilterBar = () => {
                                     {sortOrders.map((order: string) => (
                                         <MenuItem
                                             value={order}
+                                            key={order}
                                         >
                                             <ListItemText primary={order}/>
                                         </MenuItem>

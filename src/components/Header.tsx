@@ -13,19 +13,13 @@ import MenuItem from '@mui/material/MenuItem';
 import AdbIcon from '@mui/icons-material/Adb';
 import {useStore} from "../store";
 import {useNavigate} from "react-router-dom";
-import {useEffect} from "react";
 
 const Header = () => {
     const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
     const userLoggedIn = useStore(state => state.loggedIn)
     const userProfilePicture = useStore(state => state.userProfilePicture)
     const logoutUser = useStore(state => state.logout)
-    const updateAuctions = useStore(state => state.updateAuctions)
     const navigate = useNavigate();
-
-    useEffect(() => {
-        updateAuctions()
-    }, [] )
 
     const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorElUser(event.currentTarget);
