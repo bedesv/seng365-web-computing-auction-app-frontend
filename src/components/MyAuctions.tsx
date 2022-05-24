@@ -31,7 +31,7 @@ import {
     checkAuctionEnded,
     convertDateStringForInput,
     getAuctionsUserBiddedOn,
-    getCategory,
+    getCategoryName,
     getCategoryId,
     getUsersAuctions,
     isEmptyOrSpaces
@@ -72,7 +72,6 @@ const MyAuctions = () => {
     const [auctionCategoryError, setAuctionCategoryError] = useState("")
     const [auctionEndDateError, setAuctionEndDateError] = useState("")
     const [auctionImageError, setAuctionImageError] = useState("")
-
     const [auctionImagePreview, setAuctionImagePreview] = useState<string>(defaultAuctionImage)
     const userId = useStore(state => state.userId)
 
@@ -289,7 +288,6 @@ const MyAuctions = () => {
         const auctionId = createAuctionResponse.data.auctionId
 
         const saveAuctionImageResponse = await saveAuctionImage(auctionImage, auctionId)
-        console.log(saveAuctionImageResponse)
         resetNewAuctionFields()
         handleCreateAuctionModalClose()
         setUsersAuctions(await getUsersAuctions(userId))
@@ -330,7 +328,6 @@ const MyAuctions = () => {
                                                 </>
                                             }>
                                             <img
-                                                width={"100%"}
                                                 height={"400"}
                                                 src={auctionImagePreview}
                                                 alt="Auction"
@@ -485,7 +482,7 @@ const MyAuctions = () => {
                                             <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}}
                                                   justifyContent="flex-start">
                                                 <Typography fontSize="14px">
-                                                    {`Category: ${getCategory(auction.categoryId, categories)}`}
+                                                    {`Category: ${getCategoryName(auction.categoryId, categories)}`}
                                                 </Typography>
                                             </Grid>
                                             <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}}
@@ -557,7 +554,7 @@ const MyAuctions = () => {
                                             <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}}
                                                   justifyContent="flex-start">
                                                 <Typography fontSize="14px">
-                                                    {`Category: ${getCategory(auction.categoryId, categories)}`}
+                                                    {`Category: ${getCategoryName(auction.categoryId, categories)}`}
                                                 </Typography>
                                             </Grid>
                                             <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}}

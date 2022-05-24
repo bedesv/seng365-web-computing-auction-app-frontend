@@ -201,7 +201,7 @@ export const getAuctionsUserBiddedOn = async (userId: number) => {
     return auctionsUserBiddedOn
 }
 
-export const getCategory = (categoryId: number, categories: any) => {
+export const getCategoryName = (categoryId: number, categories: any) => {
     for (let category of categories) {
         if (categoryId === category.categoryId) {
             return category.name

@@ -4,29 +4,32 @@ import {useStore} from "../store";
 import {Auction} from "../types/Auction";
 import React, {SyntheticEvent, useEffect, useState} from "react";
 import {
+    Badge,
     Box,
     Button,
     Card,
     CardActionArea,
     CardContent,
     CardMedia,
-    Container,
-    Grid,
-    Modal, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
-    TableRow, TextField,
+    Container, FormControl, FormHelperText,
+    Grid, InputLabel, ListItemText, MenuItem,
+    Modal, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead,
+    TableRow, TextField, Tooltip,
     Typography
 } from "@mui/material";
 import defaultAuctionImage from "../static/default-auction.png";
 import {
+    acceptedImageFileTypes,
     calculateClosingTime,
-    checkAuctionEnded,
+    checkAuctionEnded, convertDateStringForInput,
     getAuctionBids,
-    getAuctions, getCategory,
-    getPrettyDateString
+    getAuctions, getCategoryId, getCategoryName,
+    getPrettyDateString, isEmptyOrSpaces
 } from "../helpers/HelperFunctions";
 import Avatar from "@mui/material/Avatar";
 import axios from "axios";
 import {Bid} from "../types/Bid";
+import {DriveFileRenameOutlineSharp} from "@mui/icons-material";
 
 const style = {
     position: 'absolute' as 'absolute',
@@ -52,6 +55,20 @@ const SpecificAuction = () => {
     const [placeBidModalOpen, setPlaceBidModalOpen] = useState(false)
     const [deleteAuctionModalOpen, setDeleteAuctionModalOpen] = useState(false)
     const [deleteAuctionError, setDeleteAuctionError] = useState("")
+    const [editAuctionModalOpen, setEditAuctionModalOpen] = useState(false)
+    const [auctionTitle, setAuctionTitle] = useState("");
+    const [auctionDescription, setAuctionDescription] = useState("");
+    const [auctionCategory, setAuctionCategory] = useState("");
+    const [auctionEndDate, setAuctionEndDate] = useState(convertDateStringForInput(new Date(Date.now())));
+    const [auctionImage, setAuctionImage] = useState(null);
+    const [auctionReserve, setAuctionReserve] = useState("1");
+    const [auctionTitleError, setAuctionTitleError] = useState("")
+    const [auctionDescriptionError, setAuctionDescriptionError] = useState("")
+    const [auctionReserveError, setAuctionReserveError] = useState("")
+    const [auctionCategoryError, setAuctionCategoryError] = useState("")
+    const [auctionEndDateError, setAuctionEndDateError] = useState("")
+    const [auctionImageError, setAuctionImageError] = useState("")
+    const [auctionImagePreview, setAuctionImagePreview] = useState<string>(defaultAuctionImage)
     const [bidError, setBidError] = useState("")
     const [placeBidError, setPlaceBidError] = useState("")
     const [currentBid, setCurrentBid] = useState("1")
@@ -75,6 +92,7 @@ const SpecificAuction = () => {
                     break
                 }
             }
+            resetEditAuctionFields(foundAuction)
             await setSelectedAuction(foundAuction)
             setAuctionEnded(checkAuctionEnded(foundAuction.endDate))
             return foundAuction
@@ -114,14 +132,17 @@ const SpecificAuction = () => {
     }
 
     useEffect(() => {
+        refreshAuctionPage()
+    }, [auctionId])
 
+    const refreshAuctionPage = () => {
         getAuction().then((foundAuction) => {
             getBids().then()
             if (foundAuction !== undefined) {
                 getSimilarAuctions(foundAuction).then()
             }
         })
-    }, [auctionId, navigate])
+    }
 
     const handleBidsModalOpen = () => {setBidsModalOpen(true)}
 
@@ -129,7 +150,24 @@ const SpecificAuction = () => {
 
     const handleDeleteAuctionModalOpen = () => {setDeleteAuctionModalOpen(true)}
 
-    const handleDeleteAuctionModalClose = () => {setDeleteAuctionModalOpen(false)}
+    const handleDeleteAuctionModalClose = () => {
+        setDeleteAuctionModalOpen(false)
+        if (deleteAuctionError === "Error: Client authentication mismatch, please close the popup and try again") {
+            navigate("/login")
+        } else {
+            setDeleteAuctionError("")
+            refreshAuctionPage()
+        }
+
+    }
+
+    const handleEditAuctionModalOpen = () => {setEditAuctionModalOpen(true)}
+
+    const handleEditAuctionModalClose = () => {
+        resetEditAuctionFields(selectedAuction as Auction)
+        setEditAuctionModalOpen(false)
+        refreshAuctionPage()
+    }
 
     const handlePlaceBidModalOpen = () => {
         if (userToken === "" || userId === -1) {
@@ -139,7 +177,10 @@ const SpecificAuction = () => {
         setPlaceBidModalOpen(true)
     }
 
-    const handlePlaceBidModalClose = () => {setPlaceBidModalOpen(false)}
+    const handlePlaceBidModalClose = () => {
+        setPlaceBidModalOpen(false)
+        refreshAuctionPage()
+    }
 
     const checkBid = (bid: string) => {
         const highestBidValue = highestBid ? highestBid.amount : 0
@@ -165,7 +206,7 @@ const SpecificAuction = () => {
                 "X-Authorization": userToken
             }
         }
-        const deleteAuctionResponse = await axios.delete(`http://localhost:4941/api/v1/auctions/${auctionId}`,requestHeaders)
+        const deleteAuctionResponse = await axios.delete(`http://localhost:4941/api/v1/auctions/${auctionId}`, requestHeaders)
             .then((response) => {
                 return response
             }).catch((err) => {
@@ -177,11 +218,240 @@ const SpecificAuction = () => {
             setDeleteAuctionModalOpen(false)
             navigate("/")
             return
+        } else if (deleteAuctionResponse.status === 403) {
+            console.log(deleteAuctionResponse.statusText)
+            if (deleteAuctionResponse.statusText === "Cannot delete auction after bid has been placed") {
+                setDeleteAuctionError("Error: You cannot delete an auction that has bids")
+            } else {
+                setDeleteAuctionError("Error: Client authentication mismatch, please close the popup and try again")
+            }
+        } else if (deleteAuctionResponse.status === 401) {
+            setDeleteAuctionError("Error: Client authentication mismatch, please close the popup and try again")
+        } else if (deleteAuctionResponse.status === 404) {
+            setDeleteAuctionError("Error: Auction not found, please refresh the page and try again")
         } else {
             setDeleteAuctionError("Server Error: Please try again")
         }
     }
 
+    function uploadAuctionImage(e: any) {
+        const auctionImage = e.target.files[0]
+        setAuctionImage(auctionImage)
+        if (auctionImage !== undefined && acceptedImageFileTypes.includes(auctionImage.type)) {
+            const auctionImagePath = URL.createObjectURL(auctionImage)
+            setAuctionImagePreview(auctionImagePath)
+            setAuctionImageError("")
+        }
+    }
+
+    const checkEditAuctionErrors = () => {
+        const titleErrors = checkAuctionTitleErrors(auctionTitle)
+        const descriptionErrors = checkAuctionDescriptionErrors(auctionDescription)
+        const reserveErrors = checkAuctionReserveErrors(auctionReserve)
+        const categoryErrors = checkAuctionCategoryErrors(auctionCategory)
+        const endDateErrors = checkAuctionEndDateErrors(auctionEndDate)
+
+        return titleErrors && descriptionErrors && reserveErrors && categoryErrors && endDateErrors
+    }
+
+    const resetEditAuctionErrors = () => {
+        setAuctionTitleError("")
+        setAuctionDescriptionError("")
+        setAuctionReserveError("")
+        setAuctionCategoryError("")
+        setAuctionEndDateError("")
+        setAuctionImageError("")
+
+    }
+
+    const resetEditAuctionFields = (auction: Auction) => {
+        setAuctionTitle(auction.title)
+        setAuctionDescription(auction.description)
+        setAuctionCategory(getCategoryName(auction.categoryId, categories))
+        setAuctionReserve(auction.reserve.toString())
+        setAuctionEndDate(convertDateStringForInput(new Date(auction.endDate)))
+        setAuctionImage(null)
+        setAuctionImagePreview(`http://localhost:4941/api/v1/auctions/${auction.auctionId}/image`)
+        resetEditAuctionErrors()
+    }
+
+    const checkAuctionTitleErrors = (newAuctionTitle: string) => {
+        if (newAuctionTitle.length < 1 || newAuctionTitle.length > 128) {
+            setAuctionTitleError("Error: Auction title must be between 1 and 128 characters")
+        } else if (isEmptyOrSpaces(newAuctionTitle)) {
+            setAuctionTitleError("Error: Auction title must not be blank")
+        } else {
+            setAuctionTitleError('')
+            return true
+        }
+        return false
+    }
+
+    const checkAuctionDescriptionErrors = (newAuctionDescription: string) => {
+        if (newAuctionDescription.length < 1 || newAuctionDescription.length > 2048) {
+            setAuctionDescriptionError("Error: Auction description must be between 1 and 2048 characters")
+        } else if (isEmptyOrSpaces(newAuctionDescription)) {
+            setAuctionDescriptionError("Error: Auction description must not be blank")
+        } else {
+            setAuctionDescriptionError('')
+            return true
+        }
+        return false
+    }
+
+    const checkAuctionReserveErrors = (newAuctionReserve: string) => {
+        if (Number.isNaN(Number(newAuctionReserve)) || newAuctionReserve.includes(".")) {
+            setAuctionReserve(auctionReserve)
+            return false
+        }
+        setAuctionReserve(newAuctionReserve)
+
+        if (Number(newAuctionReserve) < 1) {
+            setAuctionReserveError("Error: Auction reserve must be at least $1")
+        } else if (Number(newAuctionReserve) > 99999999999) {
+            setAuctionReserveError("Error: Auction reserve must be less than $99,999,999,999")
+        } else {
+            setAuctionReserveError('')
+            return true
+        }
+        return false
+    }
+
+    const checkAuctionCategoryErrors = (newAuctionCategory: string) => {
+        if (newAuctionCategory === "") {
+            setAuctionCategoryError("Error: Please select a category")
+            return false
+        } else {
+            setAuctionCategoryError("")
+        }
+        return true
+    }
+
+    const checkAuctionEndDateErrors = (newAuctionEndDate: string) => {
+        if (checkAuctionEnded(new Date(newAuctionEndDate).toISOString())) {
+            setAuctionEndDateError("Error: Auction end date must be in the future")
+        } else {
+            setAuctionEndDateError("")
+            return true
+        }
+        return false
+    }
+
+    const handleAuctionTitleChanged = (newAuctionTitle: string) => {
+        checkAuctionTitleErrors(newAuctionTitle)
+        setAuctionTitle(newAuctionTitle)
+    }
+
+    const handleAuctionDescriptionChanged = (newAuctionDescription: string) => {
+        checkAuctionDescriptionErrors(newAuctionDescription)
+        setAuctionDescription(newAuctionDescription)
+    }
+
+    const handleAuctionReserveChanged = (newAuctionReserve: string) => {
+        checkAuctionReserveErrors(newAuctionReserve)
+    }
+
+    const handleAuctionCategoryChanged = (newAuctionCategory: string) => {
+        checkAuctionCategoryErrors(newAuctionCategory)
+        setAuctionCategory(newAuctionCategory)
+    }
+
+    const handleEndDateChanged = (newAuctionEndDate: string) => {
+        checkAuctionEndDateErrors(newAuctionEndDate)
+        setAuctionEndDate(convertDateStringForInput(new Date(newAuctionEndDate)))
+    }
+
+    const editAuction = async () => {
+        if (!checkEditAuctionErrors()) {
+            return
+        }
+
+        const auctionCategoryId = getCategoryId(auctionCategory, categories)
+
+        return await axios.patch(`http://localhost:4941/api/v1/auctions/${auctionId}`, {
+            "title": auctionTitle,
+            "description": auctionDescription,
+            "reserve": auctionReserve,
+            "categoryId": auctionCategoryId,
+            "endDate": auctionEndDate
+        }, {headers: {"X-Authorization": userToken}})
+            .then((response) => {
+                console.log(response)
+                return response.status
+            })
+            .catch((err) => {
+                handleEditAuctionErrors(err.response.status, err.response.statusText)
+                console.log(err.response)
+                return err.response.status
+            })
+    }
+
+    const saveAuctionImage = async (auctionImage: any, auctionId: number) => {
+        let auctionImageType = auctionImage.type
+
+        if (auctionImageType === 'image/jpg') {
+            auctionImageType = 'image/jpeg'
+        }
+
+        const requestHeaders = {
+            headers: {
+                "content-type": auctionImageType,
+                "X-Authorization": userToken
+            }
+        }
+        const saveAuctionImageResponse =  await axios.put(`http://localhost:4941/api/v1/auctions/${auctionId}/image`, auctionImage, requestHeaders)
+            .then((response) => {
+                return response
+            })
+            .catch((err) => {
+                setAuctionImageError("Error saving auction image: Please try again in the auction details page")
+                return err.response
+            })
+        return saveAuctionImageResponse.status
+    }
+
+    const handleEditAuctionErrors = (resStatus: number, resText: string) => {
+        if (resStatus === 400) {
+            if (resText === "Invalid categoryId") {
+                setAuctionCategoryError("Error: Invalid category id")
+                return
+            }
+        }
+        if (resStatus === 403) {
+            if (resText === "Duplicate entry") {
+                setAuctionTitleError("Error: Auction title is the same as another auction")
+                return
+            } else if (resText === "Cannot edit auction after bid has been placed") {
+                setAuctionImageError("Error: You cannot edit an auction that has bids")
+            } else {
+                setAuctionImageError("Error: Client authentication mismatch, please close the popup and try again")
+            }
+        } else if (resStatus === 401) {
+            setAuctionImageError("Error: Client authentication mismatch, please close the popup and try again")
+        } else if (resStatus === 404) {
+            setDeleteAuctionError("Error: Auction not found, please refresh the page and try again")
+        } else {
+            setAuctionImageError("Server Error: Please try again")
+        }
+    }
+
+    const handleEditAuctionSubmit = async () => {
+        const editAuctionResponse = await editAuction()
+        if (editAuctionResponse !== 200) {
+            return
+        }
+
+        if (auctionImage !== null) {
+            console.log("Image")
+            const saveAuctionImageResponse = await saveAuctionImage(auctionImage, parseInt(auctionId as string, 10))
+            if (saveAuctionImageResponse !== 200) {
+                setAuctionImageError("Server Error: Please try again")
+                return
+            }
+        }
+
+        handleEditAuctionModalClose()
+    }
 
     const placeBid = async () => {
         if (!checkBid(currentBid)) {
@@ -219,7 +489,7 @@ const SpecificAuction = () => {
                 {selectedAuction !== undefined &&
                     <Card>
                         <Grid container>
-                            <Grid item xs={2} sm={6} md={3} style={{display: 'block', gap: "1rem", height: "auto"}}
+                            <Grid item xs={2} style={{display: 'block', gap: "1rem", height: "auto"}}
                                   sx={{pl: 2, pt: 2}} justifyContent="flex-start">
                                 <img
                                     width={"100%"}
@@ -244,7 +514,7 @@ const SpecificAuction = () => {
                                     </Grid>
                                     <Grid item xs={6} textAlign={"left"}>
                                         <Typography fontSize="14px" sx={{pl: 2}}>
-                                            {`Category: ${getCategory(selectedAuction.categoryId, categories)}`}
+                                            {`Category: ${getCategoryName(selectedAuction.categoryId, categories)}`}
                                         </Typography>
                                         <Typography fontSize="18px" sx={{pl: 2, pt: 2}}>
                                             {`Reserve: $${selectedAuction.reserve}`}
@@ -274,6 +544,11 @@ const SpecificAuction = () => {
                                         {!auctionEnded && selectedAuction.sellerId !== userId &&
                                             <Button type={"button"} variant="contained" sx={{mt: 2, ml: 2}} onClick={handlePlaceBidModalOpen}>
                                                 Place Bid
+                                            </Button>
+                                        }
+                                        {bids.length === 0 && selectedAuction.sellerId === userId &&
+                                            <Button type={"button"} variant="contained" sx={{mt: 2, ml: 2}} onClick={handleEditAuctionModalOpen}>
+                                                Edit Auction
                                             </Button>
                                         }
                                         {bids.length === 0 && selectedAuction.sellerId === userId &&
@@ -367,7 +642,6 @@ const SpecificAuction = () => {
                                                 </Grid>
                                             </Box>
                                         </Modal>
-
                                         <Modal
                                             open={deleteAuctionModalOpen}
                                             onClose={handleDeleteAuctionModalClose}
@@ -393,8 +667,140 @@ const SpecificAuction = () => {
                                                         </Button>
                                                     </Grid>
                                                 </Grid>
+                                            </Box>
+                                        </Modal>
+                                        <Modal
+                                            open={editAuctionModalOpen}
+                                            onClose={handleEditAuctionModalClose}
+                                        >
+                                            <Box sx={style}>
+                                                <Box sx={style}>
 
 
+                                                    <Grid container spacing={2}>
+                                                        <Grid sx={{display: 'flex', flexDirection: 'column', alignItems: 'center'}} item xs={12}>
+                                                            <Badge
+                                                                overlap="circular"
+                                                                anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                                                                badgeContent={
+                                                                    <>
+                                                                        <Tooltip title="Upload Auction Image">
+                                                                            <label htmlFor="file-input">
+                                                                                <DriveFileRenameOutlineSharp sx={{cursor: "pointer"}} color='primary' />
+                                                                            </label>
+                                                                        </Tooltip>
+                                                                        <input hidden type="file" accept=".jpg,.jpeg,.png,.gif" id="file-input" onChange={(e) => uploadAuctionImage(e)}/>
+                                                                    </>
+                                                                }>
+                                                                <img
+                                                                    height={"400"}
+                                                                    src={auctionImagePreview}
+                                                                    alt="Auction"
+                                                                    onError={(event: SyntheticEvent<HTMLImageElement>) => event.currentTarget.src = defaultAuctionImage}/>
+                                                            </Badge>
+                                                        </Grid>
+                                                        <Grid item xs={12} sx={{display: "flex", alignItems: 'center'}} justifyContent={"center"}>
+                                                            <Typography color="error.main">
+                                                                {auctionImageError}
+                                                            </Typography>
+                                                        </Grid>
+                                                        <Grid item xs={12}>
+                                                            <TextField
+                                                                name="title"
+                                                                required
+                                                                fullWidth
+                                                                id="title"
+                                                                label="Title"
+                                                                autoFocus
+                                                                value={auctionTitle}
+                                                                onChange={e => handleAuctionTitleChanged(e.target.value)}
+                                                                error={auctionTitleError !== ''}
+                                                                helperText={auctionTitleError}
+                                                            />
+                                                        </Grid>
+                                                        <Grid item xs={12}>
+                                                            <TextField
+                                                                required
+                                                                multiline
+                                                                fullWidth
+                                                                id="description"
+                                                                label="Description"
+                                                                name="description"
+                                                                value={auctionDescription}
+                                                                onChange={e => handleAuctionDescriptionChanged(e.target.value)}
+                                                                error={auctionDescriptionError !== ''}
+                                                                helperText={auctionDescriptionError}
+                                                            />
+                                                        </Grid>
+                                                        <Grid item xs={12}>
+                                                            <TextField
+                                                                fullWidth
+                                                                id="reserve"
+                                                                label="Reserve"
+                                                                name="reserve"
+                                                                value={auctionReserve}
+                                                                onChange={e => handleAuctionReserveChanged(e.target.value)}
+                                                                error={auctionReserveError !== ''}
+                                                                helperText={auctionReserveError}
+                                                                InputProps={{
+                                                                    startAdornment: (
+                                                                        <Typography fontSize="20px">
+                                                                            $
+                                                                        </Typography>
+                                                                    ),
+                                                                }}
+                                                            />
+                                                        </Grid>
+                                                        <Grid item xs={12}>
+                                                            <FormControl
+                                                                fullWidth
+                                                                error={auctionCategoryError !== ""}
+                                                            >
+                                                                <InputLabel id="category-label">Category</InputLabel>
+                                                                <Select
+                                                                    value={auctionCategory}
+                                                                    onChange={e => handleAuctionCategoryChanged(e.target.value)}
+                                                                    labelId={"category-label"}
+                                                                    MenuProps={{PaperProps: {sx: {maxHeight: 300}}}}
+                                                                    // error={auctionCategoryError !== ''}
+                                                                >
+                                                                    {categories.map((category: { categoryId: number; name: string; }) => (
+                                                                        <MenuItem
+                                                                            key={category.categoryId}
+                                                                            value={category.name}
+                                                                        >
+                                                                            <ListItemText primary={category.name}/>
+                                                                        </MenuItem>
+                                                                    ))}
+                                                                </Select>
+                                                                <FormHelperText>{auctionCategoryError}</FormHelperText>
+                                                            </FormControl>
+                                                        </Grid>
+                                                        <Grid item xs={12} >
+                                                            <TextField
+                                                                fullWidth
+                                                                id="datetime-local"
+                                                                label="Auction End Date"
+                                                                type="datetime-local"
+                                                                value={auctionEndDate}
+                                                                onChange={e => handleEndDateChanged(e.target.value)}
+                                                                error={auctionEndDateError !== ''}
+                                                                helperText={auctionEndDateError}
+                                                                InputLabelProps={{
+                                                                    shrink: true,
+                                                                }}
+                                                            />
+                                                        </Grid>
+                                                        <Grid item xs={12} sx={{display: "flex", align:"center"}}>
+                                                            <Button type={"button"} variant="contained" sx={{ ml: 2}} onClick={handleEditAuctionModalClose}>
+                                                                Discard
+                                                            </Button>
+                                                            <Button type={"button"} variant="contained" sx={{ ml: 2}} onClick={handleEditAuctionSubmit}>
+                                                                Save Changes
+                                                            </Button>
+                                                        </Grid>
+                                                    </Grid>
+                                                </Box>
                                             </Box>
                                         </Modal>
                                     </Grid>
@@ -462,7 +868,7 @@ const SpecificAuction = () => {
                                             <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}}
                                                   justifyContent="flex-start">
                                                 <Typography fontSize="14px">
-                                                    {`Category: ${getCategory(auction.categoryId, categories)}`}
+                                                    {`Category: ${getCategoryName(auction.categoryId, categories)}`}
                                                 </Typography>
                                             </Grid>
                                             <Grid item xs={12} style={{display: 'flex', alignItems: 'center'}}

@@ -76,7 +76,7 @@ const Header = () => {
                                         onClose={handleCloseUserMenu}
                                     >
                                         <MenuItem onClick={() => {
-                                            navigate("/profile")
+                                            navigate(`/profile`)
                                         }}>
                                             <Typography textAlign="center">Profile</Typography>
                                         </MenuItem>
