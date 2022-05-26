@@ -222,7 +222,17 @@ export const isEmptyOrSpaces = (str: string) => {
 }
 
 export const convertDateStringForInput = (date: Date) => {
-    var tzoffset = date.getTimezoneOffset() * 60000; //offset in milliseconds
+    const tzoffset = date.getTimezoneOffset() * 60000; //offset in milliseconds
     return (new Date(date.getTime() - tzoffset)).toISOString().slice(0, -8);
-
 }
+
+export const style = {
+    position: 'absolute' as 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    bgcolor: 'background.paper',
+    borderRadius: 2,
+    boxShadow: 24,
+    p: 4,
+};

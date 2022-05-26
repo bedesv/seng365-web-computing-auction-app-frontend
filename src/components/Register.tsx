@@ -48,8 +48,6 @@ const Register = () => {
         }
     }, [userLoggedIn, navigate] )
 
-
-
     const checkErrors = () => {
         const firstErrors = checkFirstNameErrors(firstName)
         const lastErrors = checkLastNameErrors(lastName)
@@ -210,7 +208,6 @@ const Register = () => {
     }
 
     const saveProfilePicture = async (profilePicture: any, userToken: string, userId: number) => {
-
         let profilePictureType = profilePicture.type
 
         if (profilePictureType === 'image/jpg') {
@@ -232,8 +229,6 @@ const Register = () => {
                 return err.response
             })
         return saveProfilePictureResponse.status
-
-
     }
 
     const handleSubmit = async () => {

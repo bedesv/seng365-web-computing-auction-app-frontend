@@ -24,23 +24,12 @@ import {
     checkAuctionEnded, convertDateStringForInput,
     getAuctionBids,
     getAuctions, getCategoryId, getCategoryName,
-    getPrettyDateString, isEmptyOrSpaces
+    getPrettyDateString, isEmptyOrSpaces, style
 } from "../helpers/HelperFunctions";
 import Avatar from "@mui/material/Avatar";
 import axios from "axios";
 import {Bid} from "../types/Bid";
 import {DriveFileRenameOutlineSharp} from "@mui/icons-material";
-
-const style = {
-    position: 'absolute' as 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    bgcolor: 'background.paper',
-    borderRadius: 2,
-    boxShadow: 24,
-    p: 4,
-};
 
 const SpecificAuction = () => {
     const categories = useStore(state => state.categories)

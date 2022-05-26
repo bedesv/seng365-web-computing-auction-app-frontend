@@ -13,6 +13,7 @@ type MyStore = {
     userId: number,
     userToken: string,
     userProfilePicture: string,
+    setUserProfilePicture: (newProfilePicture: string) => void,
     auctions: Auction[],
     updateAuctions: (searchQuery?: string, categoryNames?: string[], closedAuctions?: number, sortOrder?: number) => void
     selectedAuction: number,
@@ -52,6 +53,9 @@ export const  useStore = create<MyStore>(
             userId: -1,
             userToken: "",
             userProfilePicture: defaultProfilePicture,
+            setUserProfilePicture: (newProfilePicture: string) => set(() => {
+                return {userProfilePicture: newProfilePicture}
+            }),
             auctions: [],
             updateAuctions: async (searchQuery: string = "", categoryNames: string[] = [], closedAuctions: number = -1, sortOrder = 0) => {
                 let categoryIdList: number[] = []
