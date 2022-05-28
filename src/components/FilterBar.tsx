@@ -12,7 +12,6 @@ import * as React from "react";
 import {useStore} from "../store";
 import {numberOfAuctionsPerPage} from "./Pages";
 import {useEffect} from "react";
-import {getAuctionsUserBiddedOn, getUsersAuctions} from "../helpers/HelperFunctions";
 
 const sortOrders = ["Closing Date - Asc", "Closing Date - Desc", "Title - Asc", "Title - Desc", "Current Bid - Asc", "Current Bid - Desc", "Reserve - Asc", "Reserve - Desc"]
 

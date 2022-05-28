@@ -88,7 +88,12 @@ const MyAuctions = () => {
         setAuctionEndDate(convertDateStringForInput(new Date(Date.now())))
     }
 
-    const handleCreateAuctionModalClose = () => {setCreateAuctionModelOpen(false)}
+    const handleCreateAuctionModalClose = async () => {
+        resetNewAuctionFields()
+        resetNewAuctionErrors()
+        setUsersAuctions(await getUsersAuctions(userId))
+        setCreateAuctionModelOpen(false)
+    }
 
     function uploadAuctionImage(e: any) {
         const auctionImage = e.target.files[0]
@@ -119,6 +124,15 @@ const MyAuctions = () => {
         setAuctionEndDate(convertDateStringForInput(new Date(Date.now())))
         setAuctionImagePreview(defaultAuctionImage)
         setAuctionImage(null)
+    }
+
+    const resetNewAuctionErrors = () => {
+        setAuctionTitleError("")
+        setAuctionDescriptionError("")
+        setAuctionReserveError("")
+        setAuctionEndDateError("")
+        setAuctionImageError("")
+        setAuctionCategoryError("")
     }
 
     const checkAuctionImageErrors = () => {
@@ -274,7 +288,7 @@ const MyAuctions = () => {
                 return response
             })
             .catch((err) => {
-                setAuctionImageError("Error saving auction image: Please try again in the auction details page")
+                setAuctionImageError("Error saving auction image: Please click 'Discard' and try again in the auction details page. Your auction has been created without an image.")
                 return err.response
             })
         return saveAuctionImageResponse.status
@@ -288,9 +302,14 @@ const MyAuctions = () => {
         const auctionId = createAuctionResponse.data.auctionId
 
         const saveAuctionImageResponse = await saveAuctionImage(auctionImage, auctionId)
-        resetNewAuctionFields()
-        handleCreateAuctionModalClose()
-        setUsersAuctions(await getUsersAuctions(userId))
+        if (saveAuctionImageResponse !== 201) {
+            return
+        }
+        await handleCreateAuctionModalClose()
+    }
+
+    const handleCreateAuctionDiscard = async () => {
+        await handleCreateAuctionModalClose()
     }
 
     return (
@@ -310,8 +329,6 @@ const MyAuctions = () => {
                             onClose={handleCreateAuctionModalClose}
                         >
                             <Box sx={style}>
-
-
                                 <Grid container spacing={2}>
                                     <Grid sx={{display: 'flex', flexDirection: 'column', alignItems: 'center'}} item xs={12}>
                                         <Badge
@@ -335,7 +352,7 @@ const MyAuctions = () => {
                                         </Badge>
                                     </Grid>
                                     <Grid item xs={12} sx={{display: "flex", alignItems: 'center'}} justifyContent={"center"}>
-                                        <Typography color="error.main">
+                                        <Typography variant="h6" color="error.main">
                                             {auctionImageError}
                                         </Typography>
                                     </Grid>
@@ -427,16 +444,32 @@ const MyAuctions = () => {
                                         />
                                     </Grid>
                                 </Grid>
-                                <Button
-                                    type="button"
-                                    fullWidth
-                                    id="createAuctionButton"
-                                    variant="contained"
-                                    sx={{ mt: 3, mb: 2 }}
-                                    onClick={() => handleCreateAuctionSubmit()}
-                                >
-                                    Create Auction
-                                </Button>
+                                <Grid container>
+                                    <Grid item xs={6} style={{display: "flex", alignContent: "center"}} justifyContent={"center"}>
+                                        <Button
+                                            type="button"
+                                            fullWidth
+                                            id="discardAuctionButton"
+                                            variant="contained"
+                                            sx={{ mt: 3, mb: 2, mr: 1}}
+                                            onClick={() => handleCreateAuctionDiscard()}
+                                        >
+                                            Discard
+                                        </Button>
+                                    </Grid>
+                                    <Grid item xs={6} style={{display: "flex", alignContent: "center"}} justifyContent={"center"}>
+                                        <Button
+                                            type="button"
+                                            fullWidth
+                                            id="createAuctionButton"
+                                            variant="contained"
+                                            sx={{ mt: 3, mb: 2, ml: 1}}
+                                            onClick={() => handleCreateAuctionSubmit()}
+                                        >
+                                            Create Auction
+                                        </Button>
+                                    </Grid>
+                                </Grid>
                             </Box>
                         </Modal>
                     </Grid>
