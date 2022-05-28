@@ -121,6 +121,14 @@ const Auctions = () => {
                                     </Card>
                                 </Grid>
                             ))}
+                            {auctions.length < 1 &&
+                                <Grid container item xs={12} style={{display: 'flex', alignItems: 'center'}} justifyContent="center">
+                                    <Typography sx={{pb: 5}} gutterBottom variant="h5" component="h2">
+                                        No auctions match the current search criteria
+                                    </Typography>
+                                </Grid>
+
+                            }
                             <Grid item xs={12} sx={{display: "flex"}} justifyContent={"center"}>
                                 <Pages/>
                             </Grid>

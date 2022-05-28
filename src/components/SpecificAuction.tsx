@@ -58,6 +58,7 @@ const SpecificAuction = () => {
     const [auctionEndDateError, setAuctionEndDateError] = useState("")
     const [auctionImageError, setAuctionImageError] = useState("")
     const [auctionImagePreview, setAuctionImagePreview] = useState<string>(defaultAuctionImage)
+    const [currentAuctionImage, setCurrentAuctionImage] = useState("")
     const [bidError, setBidError] = useState("")
     const [placeBidError, setPlaceBidError] = useState("")
     const [currentBid, setCurrentBid] = useState("1")
@@ -122,6 +123,7 @@ const SpecificAuction = () => {
 
     useEffect(() => {
         refreshAuctionPage()
+        setCurrentAuctionImage(`http://localhost:4941/api/v1/auctions/${auctionId}/image`)
     }, [auctionId])
 
     const refreshAuctionPage = () => {
@@ -208,7 +210,6 @@ const SpecificAuction = () => {
             navigate("/")
             return
         } else if (deleteAuctionResponse.status === 403) {
-            console.log(deleteAuctionResponse.statusText)
             if (deleteAuctionResponse.statusText === "Cannot delete auction after bid has been placed") {
                 setDeleteAuctionError("Error: You cannot delete an auction that has bids")
             } else {
@@ -365,12 +366,10 @@ const SpecificAuction = () => {
             "endDate": auctionEndDate
         }, {headers: {"X-Authorization": userToken}})
             .then((response) => {
-                console.log(response)
                 return response.status
             })
             .catch((err) => {
                 handleEditAuctionErrors(err.response.status, err.response.statusText)
-                console.log(err.response)
                 return err.response.status
             })
     }
@@ -431,12 +430,12 @@ const SpecificAuction = () => {
         }
 
         if (auctionImage !== null) {
-            console.log("Image")
             const saveAuctionImageResponse = await saveAuctionImage(auctionImage, parseInt(auctionId as string, 10))
             if (saveAuctionImageResponse !== 200) {
                 setAuctionImageError("Server Error: Please try again")
                 return
             }
+            await setCurrentAuctionImage(auctionImagePreview)
         }
 
         handleEditAuctionModalClose()
@@ -483,7 +482,7 @@ const SpecificAuction = () => {
                                 <img
                                     width={"100%"}
                                     height={"auto"}
-                                    src={`http://localhost:4941/api/v1/auctions/${selectedAuction.auctionId}/image`}
+                                    src={currentAuctionImage}
                                     alt="Auction"
                                     onError={(event: SyntheticEvent<HTMLImageElement>) => event.currentTarget.src = defaultAuctionImage}/>
                             </Grid>
@@ -570,7 +569,7 @@ const SpecificAuction = () => {
                                                                     sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                                                                 >
                                                                     <TableCell component="th" scope="row">
-                                                                        {bid.amount}
+                                                                        {`$${bid.amount}`}
                                                                     </TableCell>
                                                                     <TableCell align="right">{getPrettyDateString(bid.timestamp)}</TableCell>
                                                                     <TableCell align="right">

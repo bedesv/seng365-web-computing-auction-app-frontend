@@ -50,7 +50,7 @@ const Profile = () => {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [hasProfilePic, setHasProfilePic] = useState(false)
     const handleClickShowCurrentPassword = () => setShowCurrentPassword(!showCurrentPassword);
-    const [showUpdatedPassword, setShowUpdatedPassword] = useState(true);
+    const [showUpdatedPassword, setShowUpdatedPassword] = useState(false);
     const handleClickShowUpdatedPassword = () => setShowUpdatedPassword(!showUpdatedPassword);
     const navigate = useNavigate();
 
@@ -66,6 +66,14 @@ const Profile = () => {
             }).catch(() => {
                 return undefined
             })
+
+        await axios.get(`http://localhost:4941/api/v1/users/${userId}/image`)
+            .then(() => {
+                setHasProfilePic(true)
+            }).catch(() => {
+                setHasProfilePic(false)
+            })
+
 
         if (foundUser !== undefined) {
             await resetEditUserFields(foundUser)
